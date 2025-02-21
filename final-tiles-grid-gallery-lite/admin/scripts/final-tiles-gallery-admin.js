@@ -46,7 +46,36 @@ var FTG = function($) {
                 FinalTiles_gallery: $('#FinalTiles_gallery').val(),
                 gid: $("#gallery-id").val()
             };
-            
+            /* <fs_premium_only> */
+            if (source == "woocommerce") {
+                data.woo_categories = $('[name="woo_cat"]:checked').map(function() {
+                    return this.value;
+                }).get().join();
+            }
+            if (source == "posts") {
+                data.post_taxonomy = [];
+                $('[name="post_taxonomy"]:checked').each(function () {
+                    data.post_taxonomy.push($(this).data("taxonomy") + "|" + $(this).val());
+                });
+                data.post_taxonomy = data.post_taxonomy.join();
+                /*data.post_categories = $('[name="post_categories"]:checked').map(function() {
+                    return this.value;
+                }).get().join();*/
+
+                data.post_types = $('[name="post_types"]:checked').map(function() {
+                    return this.value;
+                }).get().join();
+
+                data.post_tags = $('[name="post_tags"]:checked').map(function() {
+                    return this.value;
+                }).get().join();
+
+                data.ftg_taxonomyOperator = $('[name="ftg_taxonomyOperator"]').val();
+                data.ftg_max_posts = $('[name="ftg_max_posts"]').val();
+
+                console.log(data);
+            }
+            /* </fs_premium_only> */
             $.post(ajaxurl, data, function(html) {
                 $("#image-list").empty().append(html);
 
@@ -129,14 +158,54 @@ var FTG = function($) {
             });
         },
         update_filters: function() {
-            
+            /* <fs_premium_only> */
+            var ff = [];
+            $(".gallery-filters .f").each(function() {
+                var val = $.trim($(this).val());
+                if (val.length > 0 && $.inArray(val, ff) < 0) {
+                    ff.push(val);
+                }
+            });
+            if($(".gallery-filters [name=ftg_filters]").length)
+                $(".gallery-filters [name=ftg_filters]").val(ff.join('|'));
+            /* </fs_premium_only> */
         },
         update_custom_isf: function() {
             var isf = [];
-            
+            /* <fs_premium_only> */
+            $(".custom_isf tbody tr").each(function(i, o) {
+                var res = $.trim($(o).find("input.res").val());
+                var size = $.trim($(o).find("input.size").val());
+
+                if (res && size) {
+                    isf.push(res + "," + size);
+                }
+            });
+            if($("[name=ftg_imageSizeFactorCustom]").length)
+                $("[name=ftg_imageSizeFactorCustom]").val(isf.join("|"));
+            /* </fs_premium_only> */
         },
         add_filter: function(value) {
-            
+            /* <fs_premium_only> */
+            var defFilter = $('[name="filter_def"]').val();
+            var checked = value == defFilter ? "checked" : "";
+            if (!value)
+                value = "";
+
+            var row = $("<p style='display:none'><a class='del-filter btn-floating waves-effect red' href='#'><i class='fa fa-times'></i></a> <input class='f' type='text' /> <input class='browser-default' type='radio' " + checked + " name='ftg_filterDef' value='" + value + "'> Selected</p>");
+            if (value)
+                row.find(".f").val(value);
+
+            $(".filters .text").append(row);
+            row.slideDown();
+            row.find("a").click(function(e) {
+                e.preventDefault();
+                row.slideUp(function() {
+                    $(this).remove();
+                });
+                FTG.update_filters();
+            });
+            /* </fs_premium_only> */
         },
         add_isf: function(value) {
             var $item = $("<tr><td class='del'></td><td></td><td></td></tr>");
@@ -159,13 +228,97 @@ var FTG = function($) {
 
             var source = $('[name="ftg_source"]').val();
 
-            
+            /* <fs_premium_only> */
+            var ff = [];
+            if($(".filters [name=ftg_filters]").length > 0)
+                ff = $(".filters [name=ftg_filters]").val().split('|');
+
+            if (ff.length == 0 || ff[0] == "") {
+                FTG.add_filter();
+            } else {
+                for (var i = 0; i < ff.length; i++) {
+                    if (ff[i].length > 0)
+                        FTG.add_filter(ff[i]);
+                }
+            }
+
+            var isf = "";
+            if($("[name=ftg_imageSizeFactorCustom]").length)
+                isf = $("[name=ftg_imageSizeFactorCustom]").val().split('|');
+
+            for (var i = 0; i < isf.length; i++) {
+                if (isf[i].length)
+                    FTG.add_isf(isf[i]);
+            }
+            /* </fs_premium_only> */
         },
         refresh_woocommerce: function() {
-            
+            /* <fs_premium_only> */
+            FTG.show_loading();
+            var data = {
+                action: 'refresh_gallery',
+                source: 'woocommerce',
+                FinalTiles_gallery: $('#FinalTiles_gallery').val()
+            };
+            data.woo_categories = $("[name=woo_cat]:checked").map(function() {
+                return this.value;
+            }).get().join();
+
+            $.ajax({
+                url: ajaxurl,
+                type: 'post',
+                data: data,
+                error: function(a, b, c) {
+                    console.log(a, b, c);
+                    FTG.hide_loading();
+                },
+                success: function(html) {
+                    $("#image-list").empty().append(html)
+                    FTG.hide_loading();
+                }
+            });
+            /* </fs_premium_only> */
         },
         refresh_posts: function() {
-            
+            /* <fs_premium_only> */
+            FTG.show_loading();
+            var data = {
+                action: 'refresh_gallery',
+                source: 'posts',
+                FinalTiles_gallery: $('#FinalTiles_gallery').val()
+            };
+
+            data.post_taxonomy = [];
+            $('[name="post_taxonomy"]:checked').each(function () {
+                data.post_taxonomy.push($(this).data("taxonomy") + "|" + $(this).val());
+            });
+            data.post_taxonomy = data.post_taxonomy.join();
+
+            data.post_types = $("[name=post_types]:checked").map(function() {
+                return this.value;
+            }).get().join();
+
+            data.post_tags = $("[name=post_tags]:checked").map(function() {
+                return this.value;
+            }).get().join();
+
+            data.ftg_max_posts = $("[name=ftg_max_posts]").val();
+            data.ftg_taxonomyOperator = $('[name="ftg_taxonomyOperator"]').val();
+
+            $.ajax({
+                url: ajaxurl,
+                data: data,
+                type: "post",
+                error: function(a, b, c) {
+                    console.log(a, b, c);
+                    FTG.hide_loading();
+                },
+                success: function(html) {
+                    $("#image-list").empty().append(html)
+                    FTG.hide_loading();
+                }
+            });
+            /* </fs_premium_only> */
         },
         save_gallery: function() {
             // !gallery save
@@ -528,7 +681,22 @@ var FTG = function($) {
                 e.preventDefault();
                 FTG.save_gallery();
             });
-            
+            /* <fs_premium_only> */
+            $(".filters a.add").click(function(e) {
+                e.preventDefault();
+                FTG.add_filter();
+            });
+            $(".field-help").click(function (e) {
+                e.preventDefault();
+
+                var f = $(this).data("field");
+                $("#help-" + f).show();
+            });
+            $(".custom_isf a").click(function(e) {
+                e.preventDefault();
+                FTG.add_isf();
+            });
+            /* </fs_premium_only> */
             $("#image-list").on("click", ".item .thumb", function() {
                 $(this).parents(".item").toggleClass("selected");
                 $(this).parents(".item").find(".checkbox").toggleClass("checked");
@@ -606,7 +774,32 @@ var FTG = function($) {
                 else
                     $(".js-no-hidden").show();
 
-                
+                /* <fs_premium_only> */
+                if (source == 'posts') {
+                    panel.find("[name=link], textarea").hide();
+                }
+
+                var selFilters = $item.find("[name=filters]").val().split('|');
+                var filters = "";
+                if($("[name=ftg_filters]").length)
+                    filters = $("[name=ftg_filters]").val().split('|');
+
+                $(".filters", panel).empty();
+                for (var i = 0; i < filters.length; i++) {
+                    if ($.trim(filters[i]).length > 0) {
+                        var ft = $("<input class='browser-default' type='checkbox' />");
+                        ft.val($.trim(filters[i]));
+                        ft.attr("id", "imgft" + i);
+                        $(".filters", panel).append(ft);
+
+                        ft.after("<label for='imgft" + i + "'>" + $.trim(filters[i]) + "</label>");
+
+                        if ($.inArray(filters[i], selFilters) > -1)
+                            ft.attr("checked", "checked");
+
+                    }
+                }
+                /* </fs_premium_only> */
 
                 var link = $item.find("[name=link]").val();
 
@@ -666,7 +859,15 @@ var FTG = function($) {
                     $("[data-action='remove']").show();
                 }
 
-                
+                /* <fs_premium_only> */
+                if (source == 'posts') {
+
+                    FTG.refresh_posts();
+                }
+                if (source == 'woocommerce') {
+                    FTG.refresh_woocommerce();
+                }
+                /* </fs_premium_only> */
             });
 
             var refreshPostsTO = 0;
@@ -692,7 +893,15 @@ var FTG = function($) {
                 }, 500);
             });
 
-            
+            /* <fs_premium_only> */
+            $("body").on("click", '[name="woo_cat"]', function() {
+                $('[name="ftg_woo_categories"]').val($('[name="woo_cat"]:checked').map(function() {
+                    return this.value;
+                }).get().join());
+
+                FTG.refresh_woocommerce();
+            });
+            /* </fs_premium_only> */
             $("body").on("click", "[name=click_action]", function() {
                 if ($(this).val() == "url") {
                     $(this).siblings("[name=url]").get(0).disabled = false;
@@ -907,7 +1116,71 @@ var FTG = function($) {
                 $("#shortcode-" + code).toggleClass("visible");
             });
 
-            
+            /* <fs_premium_only> */
+            $("body").on("click", "#video-panel-model a", function(e) {
+                e.preventDefault();
+                var filters = [];
+                $('.video-filters input[type=checkbox]:checked').each(function() {
+                    filters.push($(this).val());
+                })
+                filters = filters.join('|');
+                switch ($(this).data("action")) {
+                    case "edit":
+                        // !video save
+                        var $panel = $("#video-panel-model");
+                        var data = {
+                            action: 'save_video',
+                            embed: $("textarea", $panel).val(),
+                            galleryId: $("#gallery-id").val(),
+                            FinalTiles_gallery: $('#FinalTiles_gallery').val()
+                        };
+
+                        FTG.show_loading();
+
+                        $("input[type=hidden]", $panel).each(function() {
+                            if ($(this).attr("name"))
+                                data[$(this).attr("name")] = $(this).val();
+                        });
+
+                        data['filters'] = filters;
+                        console.log(data);
+
+                        data['step'] = $('#video-panel-action').val();
+
+                        $.ajax({
+                            url: ajaxurl,
+                            data: data,
+                            dataType: "json",
+                            type: "post",
+                            error: function(a, b, c) {
+                                console.log(a, b, c);
+                                FTG.hide_loading();
+                                alert("error adding images");
+                            },
+                            success: function(r) {
+                                if (r.success) {
+                                    FTG.hide_loading();
+                                    FTG.load_images();
+                                }
+                            }
+                        });
+                        break;
+                }
+            });
+            $(".open-add-video").on("click", function(e) {
+                e.preventDefault();
+                $('#video-panel-action').val('add');
+                $(".save", $panel).text("Save");
+                $("#video-panel-model textarea").val("");
+                var $panel = $("#video-panel-model"); //.clone().attr("id", "video-panel");
+
+                if ($('#video-panel-action').val('add')) {
+                    $('.video-filters', $panel).empty();
+                }
+                M.Modal.getInstance($panel).open();
+
+            });
+            /* </fs_premium_only> */
 
             $(".open-media-panel").on("click", function(e) {
                 e.preventDefault();
@@ -1058,16 +1331,31 @@ var FTGWizard = function($) {
                         $(this).text("Save");
                         if (branch == 'images') {
                             $(".select-images").show();
-                            
+                            /* <fs_premium_only> */
+                            $("[name=post_types]").val("");
+                            $("[name=woo_categories]").val("");
+                            /* </fs_premium_only> */
                             //$("[name=ftg_max_posts]").val(0);
                         } else if (branch == 'posts') {
                             $(".select-images").hide();
                             $("[name=enc_images]").val("");
-                            
+                            /* <fs_premium_only> */
+                            var types = [];
+                            $("[name=_post_types]:checked").each(function() {
+                                types.push(this.value);
+                            });
+                            $("[name=post_types]").val(types.join(','));
+                            /* </fs_premium_only> */
                         } else {
                             $(".select-images").hide();
                             $("[name=enc_images]").val("");
-                            
+                            /* <fs_premium_only> */
+                            var categories = [];
+                            $("[name=_woo_categories]:checked").each(function() {
+                                categories.push(this.value);
+                            });
+                            $("[name=woo_categories]").val(categories.join(','));
+                            /* </fs_premium_only> */
                         }
                     } else {
                         $(this).text("Next");

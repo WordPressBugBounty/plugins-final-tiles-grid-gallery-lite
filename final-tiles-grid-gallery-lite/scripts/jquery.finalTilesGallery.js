@@ -58,7 +58,9 @@ var qualifyURL = function (url) {
             autoLoadURL: null,
             selectedFilter: '',
             loadMethod: 'sequential',
-            
+            /* <fs_premium_only> */
+            setupFilters: true,
+            /* </fs_premium_only> */
             onComplete: function () {},
             onUpdate: function () {},
             onLoading: function () {},
@@ -296,7 +298,10 @@ var qualifyURL = function (url) {
                 });
             }
 
-            
+            /* <fs_premium_only> */
+            if(this.settings.setupFilters)
+                this.setupFilters();
+            /* </fs_premium_only> */
             this.edges.push({ left: 0, top: 0, width: this.currentWidth, index: 0 });
 
             this.isImageLoading = false;
@@ -320,7 +325,37 @@ var qualifyURL = function (url) {
             this.$element.find(".ftg-items").height(0).empty();
             this.refresh();
         },
-        
+        /* <fs_premium_only> */
+        setupFilters: function() {
+            var instance = this;
+            instance.$element.find(".ftg-filters a").click(function(e) {
+                e.preventDefault();
+
+                instance.$element.find(".ftg-filters a").removeClass("selected");
+                $(this).addClass("selected");
+
+                var ft = $(this).attr("href").replace("#ftg-set-", "");
+                if(ft == "ftgall") {
+                    instance.$element.find(".tile").removeClass("ftg-filter-hidden-tile");
+                    instance.$element.find(".tile a").addClass("everlightbox-trigger");
+                } else {
+                    instance.$element.find(".everlightbox-trigger").removeClass("everlightbox-trigger");
+                    instance.$element
+                                .find(".tile")
+                                .not(".ftg-set-" + ft)
+                                .addClass("ftg-filter-hidden-tile")
+                                .end()
+                                .filter(".ftg-set-" + ft)
+                                .removeClass("ftg-filter-hidden-tile");
+
+                    instance.$element
+                                .find(".ftg-set-" + ft + " a")
+                                .addClass("everlightbox-trigger");
+                }
+                instance.refresh();
+            });
+        },
+        /* </fs_premium_only> */
         printEdges: function () {
             this.$element.find(".edge").remove();
             for (i = 0; i < this.edges.length; i++) {
@@ -894,7 +929,13 @@ var qualifyURL = function (url) {
     });
 
     $(function () {
-        
+        /* <fs_premium_only> */
+        $(".final-tiles-gallery .woo").on('click', function (e) {
+            e.stopPropagation();
+            location.href = $(this).data("href");
+            return false;
+        });
+        /* </fs_premium_only> */
         $(".ftg-social a").on( 'click', function(e) {
 
             e.preventDefault();
