@@ -2,8 +2,8 @@
 Contributors: wpchill, silkalns, freemius
 Tags: gallery, grid gallery, best gallery plugin, free gallery, gallery plugin, gallery grid plugin, masonry, photo gallery, image gallery, social gallery, portfolio gallery, lightbox, justified gallery
 Requires at least: 5.2
-Tested up to: 6.6
-Stable tag: 3.6.2
+Tested up to: 6.8
+Stable tag: 3.6.3
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -124,6 +124,9 @@ Currently galleries made with Envira, FooGallery, Instagram, NextGen, JetPack, M
 6. 52 pages documentation
 
 == Changelog ==
+
+= 3.6.3 - 17.04.2025 =
+- Fixed: Load texdomain just in time.
 
 = 3.6.2 - 05.11.2024 =
 - Update: Freemius framework.
