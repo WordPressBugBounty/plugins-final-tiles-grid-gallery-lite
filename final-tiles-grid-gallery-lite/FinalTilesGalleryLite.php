@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.3
+ * Version:                  3.6.4
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             6.8
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.3' );
+define( 'FTGVERSION', '3.6.4' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -196,7 +196,11 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
 
         //Constructor
         public function __construct() {
-            add_action( 'init', array($this, 'init') );
+            $this->plugin_name = plugin_basename( __FILE__ );
+            $this->define_constants();
+            $this->define_db_tables();
+            $this->FinalTilesdb = $this->create_db_conn();
+            add_action( 'init', array($this, 'setupFields') );
             add_filter( 'widget_text', 'do_shortcode' );
             add_action( 'init', array($this, 'create_textdomain') );
             add_action( 'wp_enqueue_scripts', array($this, 'add_gallery_scripts') );
@@ -242,14 +246,6 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 );
             }
             add_action( 'init', array($this, 'resetFields'), 99 );
-        }
-
-        public function init() {
-            $this->plugin_name = plugin_basename( __FILE__ );
-            $this->define_constants();
-            $this->setupFields();
-            $this->define_db_tables();
-            $this->FinalTilesdb = $this->create_db_conn();
         }
 
         /**
@@ -1387,7 +1383,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             $this->fields[$section]['fields'][$field] = $data;
         }
 
-        private function setupFields() {
+        public function setupFields() {
             include 'admin/include/fields.php';
         }
 
