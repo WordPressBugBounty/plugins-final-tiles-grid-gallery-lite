@@ -3,7 +3,7 @@ Contributors: wpchill, silkalns, freemius
 Tags: gallery, grid gallery, best gallery plugin, free gallery, gallery plugin, gallery grid plugin, masonry, photo gallery, image gallery, social gallery, portfolio gallery, lightbox, justified gallery
 Requires at least: 5.2
 Tested up to: 6.8
-Stable tag: 3.6.4
+Stable tag: 3.6.5
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -124,6 +124,9 @@ Currently galleries made with Envira, FooGallery, Instagram, NextGen, JetPack, M
 6. 52 pages documentation
 
 == Changelog ==
+= 3.6.5 - 19.05.2025 =
+- Load assets locally
+
 = 3.6.4 - 24.04.2025 =
 - Fixed: File not found error on plugin activation.
 

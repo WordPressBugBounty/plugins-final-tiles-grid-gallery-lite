@@ -63,7 +63,7 @@ esc_html_e( 'Media library', 'final-tiles-grid-gallery-lite' );
 esc_html_e( 'Recent posts', 'final-tiles-grid-gallery-lite' );
 ?> - <a class="in-wizard-cta" href="<?php 
 echo esc_url( ftg_fs()->get_upgrade_url() );
-?>"><i class="mdi mdi-bell-ring-outline"></i>
+?>"><i class="fa fa-bell-o"></i>
 								<?php 
 esc_html_e( 'Unlock this feature. Upgrade Now!', 'final-tiles-grid-gallery-lite' );
 ?>
@@ -79,7 +79,7 @@ esc_html_e( 'Unlock this feature. Upgrade Now!', 'final-tiles-grid-gallery-lite'
 esc_html_e( 'WooCommerce products', 'final-tiles-grid-gallery-lite' );
 ?> - <a class="in-wizard-cta" href="<?php 
 echo esc_url( ftg_fs()->get_upgrade_url() );
-?>"><i class="mdi mdi-bell-ring-outline"></i>
+?>"><i class="fa fa-bell-o"></i>
 								<?php 
 esc_html_e( 'Unlock this feature. Upgrade Now!', 'final-tiles-grid-gallery-lite' );
 ?>

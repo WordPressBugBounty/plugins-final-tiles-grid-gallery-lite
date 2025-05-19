@@ -44,7 +44,7 @@ if(isset($imageResults))
 					</div>
 				<?php endif ?>
 				<a href="#<?php echo esc_attr($image->type );?>-panel-model" class="edit ftg-action-link modal-trigger">
-					<i class="mdi mdi-pencil"></i>
+					<i class="fa fa-pencil"></i>
 				</a>
 
 				<?php if($image->source == "gallery") : ?>
@@ -57,7 +57,7 @@ if(isset($imageResults))
 					<span class='card-title'><?php echo esc_html( array_search($image->imagePath, $sizes) ); ?></span>
 				<?php endif ?>
 				<?php if($image->hidden == "T") : ?>
-					<span class='card-hidden'><i class="mdi mdi-eye-off" title="Hidden image"></i></span>
+					<span class='card-hidden'><i class="fa fa-eye-slash" title="Hidden image"></i></span>
 				<?php endif ?>
 				<?php
 				if(! empty($image->filters) || isset($image->group))
@@ -66,14 +66,14 @@ if(isset($imageResults))
 
 					if(isset($image->group) && trim($image->group))
 					{
-						echo "<li><i class=\"mdi mdi-folder-outline\"></i> ".esc_html($image->group)."</li>";
+						echo "<li><i class=\"fa fa-folder-o\"></i> ".esc_html($image->group)."</li>";
 					}
 
 					if(! empty($image->filters))
 					{
 						foreach ( explode( '|', $image->filters ) as $f ) {
 							if ( in_array( $f, $active_filters ) ) {
-								echo "<li><i class='mdi mdi-tag-outline'></i> ".esc_html($f)."</li>";
+								echo "<li><i class='fa fa-tag'></i> ".esc_html($f)."</li>";
 							}
 						}
 					}

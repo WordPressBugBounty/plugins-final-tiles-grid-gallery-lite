@@ -929,14 +929,14 @@ $this->addField( "Customizations", "afterGalleryText", array(
 $this->addField( "Customizations", "style", array(
     "name"        => __( "Custom CSS", "final-tiles-grid-gallery-lite" ),
     "type"        => "textarea",
-    "description" => wp_kses( __( "<strong>Write just the code without using the &lt;style&gt; tag.</strong><br>List of useful selectors:<br>\r\n        <br>\r\n        <ul>\r\n            <li>\r\n                <em>.final-tiles-gallery</em> : gallery container;\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .tile-inner</em> : tile content;\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .tile-inner .item</em> : image of the tile;\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .tile-inner .caption</em> : caption of the tile;\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .ftg-filters</em> : filters container\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .ftg-filters a</em> : filter\r\n            </li>\r\n            <li>\r\n                <em>.final-tiles-gallery .ftg-filters a.selected</em> : selected filter\r\n            </li>\r\n        </ul>", "final-tiles-grid-gallery-lite" ), array() ),
+    "description" => wp_kses( __( "<strong>Write just the code without using the &lt;style&gt; tag.</strong><br>List of useful selectors:<br>\n        <br>\n        <ul>\n            <li>\n                <em>.final-tiles-gallery</em> : gallery container;\n            </li>\n            <li>\n                <em>.final-tiles-gallery .tile-inner</em> : tile content;\n            </li>\n            <li>\n                <em>.final-tiles-gallery .tile-inner .item</em> : image of the tile;\n            </li>\n            <li>\n                <em>.final-tiles-gallery .tile-inner .caption</em> : caption of the tile;\n            </li>\n            <li>\n                <em>.final-tiles-gallery .ftg-filters</em> : filters container\n            </li>\n            <li>\n                <em>.final-tiles-gallery .ftg-filters a</em> : filter\n            </li>\n            <li>\n                <em>.final-tiles-gallery .ftg-filters a.selected</em> : selected filter\n            </li>\n        </ul>", "final-tiles-grid-gallery-lite" ), array() ),
     "proCall"     => false,
     "excludeFrom" => array("shortcode"),
 ) );
 $this->addField( "Customizations", "script", array(
     "name"        => esc_html__( "Custom scripts", "final-tiles-grid-gallery-lite" ),
     "type"        => "textarea",
-    "description" => wp_kses( __( "This script will be called after the gallery initialization. Useful for custom lightboxes.\r\n            <br />\r\n            <br />\r\n            <strong>Write just the code without using the &lt;script&gt;&lt;/script&gt; tags</strong>", "final-tiles-grid-gallery-lite" ), array() ),
+    "description" => wp_kses( __( "This script will be called after the gallery initialization. Useful for custom lightboxes.\n            <br />\n            <br />\n            <strong>Write just the code without using the &lt;script&gt;&lt;/script&gt; tags</strong>", "final-tiles-grid-gallery-lite" ), array() ),
     "proCall"     => false,
     "excludeFrom" => array("shortcode"),
 ) );
@@ -1012,7 +1012,7 @@ $this->addField( "Advanced", "columnsPhonePortrait", array(
 $this->addField( "Advanced", "imageSizeFactor", array(
     "name"        => esc_html__( "Image size factor", "final-tiles-grid-gallery-lite" ),
     "type"        => "slider",
-    "description" => esc_html__( "Percentage of image size, i.e.: if an image of the gallery is 300x200 and the size factor is 50% then the resulting image will be 150x100.\r\n            90% is a suggested default value, because under some circumstances, the images could be enlarged by the script (to fill gaps and avoid blank spaces between tiles).", "final-tiles-grid-gallery-lite" ),
+    "description" => esc_html__( "Percentage of image size, i.e.: if an image of the gallery is 300x200 and the size factor is 50% then the resulting image will be 150x100.\n            90% is a suggested default value, because under some circumstances, the images could be enlarged by the script (to fill gaps and avoid blank spaces between tiles).", "final-tiles-grid-gallery-lite" ),
     "default"     => 90,
     "min"         => 1,
     "max"         => 100,

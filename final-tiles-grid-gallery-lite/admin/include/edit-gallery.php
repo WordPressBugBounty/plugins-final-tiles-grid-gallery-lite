@@ -544,7 +544,7 @@ foreach ( $ftg_fields as $section => $s ) {
 								<div class="text">
 									<a class="in-table-cta" href="<?php 
                 echo esc_url( ftg_fs()->get_upgrade_url() );
-                ?>"><i class="mdi mdi-bell-ring-outline"></i>
+                ?>"><i class="fa fa-bell-o"></i>
 													<?php 
                 esc_html_e( 'Unlock this feature. Upgrade Now!', 'final-tiles-grid-gallery-lite' );
                 ?>
@@ -1066,7 +1066,7 @@ esc_html_e( 'Open in lightbox (when using a lightbox)', 'final-tiles-grid-galler
 		</div>
 	</div>
 	<div class="field buttons modal-footer">
-		<a href="#" data-action="cancel" class="modal-close action button"><i class="mdi-content-reply"></i> <?php 
+		<a href="#" data-action="cancel" class="modal-close action button"><i class="fa fa-reply"></i> <?php 
 esc_html_e( 'Cancel', 'final-tiles-grid-gallery-lite' );
 ?></a>
 		<a href="#" data-action="save" class="modal-close button components-button is-primary"><i class="fa fa-save"></i> <?php 

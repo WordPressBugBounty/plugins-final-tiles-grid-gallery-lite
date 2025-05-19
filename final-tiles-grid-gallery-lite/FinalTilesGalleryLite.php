@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.4
+ * Version:                  3.6.5
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             6.8
@@ -599,7 +599,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             wp_enqueue_style( 'finalTilesGallery_stylesheet' );
             wp_register_script( 'lightbox2_script', plugins_url( 'lightbox/lightbox2/js/script.js', __FILE__ ), array('jquery') );
             wp_register_style( 'lightbox2_stylesheet', plugins_url( 'lightbox/lightbox2/css/style.css', __FILE__ ) );
-            wp_register_style( 'fontawesome_stylesheet', '//netdna.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.css' );
+            wp_register_style( 'fontawesome_stylesheet', plugins_url( 'fonts/font-awesome/css/font-awesome.min.css', __FILE__ ) );
             wp_enqueue_style( 'fontawesome_stylesheet' );
         }
 
@@ -652,10 +652,8 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             wp_enqueue_style( 'wp-color-picker' );
             wp_enqueue_script( 'media-upload' );
             wp_enqueue_script( 'thickbox' );
-            wp_register_style( 'google-fonts', '//fonts.googleapis.com/css?family=Roboto:400,700,500,300,900' );
-            wp_enqueue_style( 'google-fonts' );
-            wp_register_style( 'google-icons', '//cdn.materialdesignicons.com/1.9.32/css/materialdesignicons.min.css', array() );
-            wp_enqueue_style( 'google-icons' );
+            wp_register_style( 'roboto-fonts', plugins_url( 'fonts/fonts.css', __FILE__ ) );
+            wp_enqueue_style( 'roboto-fonts' );
             wp_register_style( 'final-tiles-gallery-admin', plugins_url( 'admin/css/style.css', __FILE__ ), array('colors') );
             wp_enqueue_style( 'final-tiles-gallery-admin' );
             wp_register_script( 'materialize', plugins_url( 'admin/scripts/materialize.min.js', __FILE__ ), array('jquery') );
@@ -668,7 +666,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             ) );
             wp_enqueue_script( 'final-tiles-gallery' );
             wp_enqueue_style( 'thickbox' );
-            wp_register_style( 'fontawesome_stylesheet', '//netdna.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.css' );
+            wp_register_style( 'fontawesome_stylesheet', plugins_url( 'fonts/font-awesome/css/font-awesome.min.css', __FILE__ ) );
             wp_enqueue_style( 'fontawesome_stylesheet' );
         }
 
