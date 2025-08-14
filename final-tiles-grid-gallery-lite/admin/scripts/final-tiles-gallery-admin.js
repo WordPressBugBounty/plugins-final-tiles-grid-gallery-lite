@@ -434,7 +434,11 @@ var FTG = function($) {
                         type: 'POST',
                         data: data,
                         success: function(r) {
-                            alert("Gallery configuration has been updated successfully");
+                            if(r.search("Invalid JSON") > -1) {
+                                alert("Gallery configuration was not updated");
+                            } else {
+                                alert("Gallery configuration has been updated successfully");
+                            }
                         }
                     });
                 }

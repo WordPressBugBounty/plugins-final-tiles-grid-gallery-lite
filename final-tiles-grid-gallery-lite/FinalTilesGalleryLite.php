@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.5
+ * Version:                  3.6.6
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             6.8
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.4' );
+define( 'FTGVERSION', '3.6.6' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -537,6 +537,12 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
                 $config = ( isset( $_POST['config'] ) ? wp_unslash( $_POST['config'] ) : '' );
                 // phpcs:ignore
+                if ( !empty( $config ) ) {
+                    $decoded = json_decode( $config );
+                    if ( json_last_error() !== JSON_ERROR_NONE ) {
+                        wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
+                    }
+                }
                 $this->FinalTilesdb->update_config( $id, $config );
             }
             exit;
