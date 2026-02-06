@@ -59,37 +59,76 @@
 				</thead>
 
 				<tbody id="the-list">
-					<?php foreach($galleries as $gallery) : ?>
-					<tr id="gallery-<?php echo absint($gallery->Id); ?>" class="iedit author-self level-0 post-10 type-post status-publish format-standard hentry">
-						<td class="title column-title has-row-actions column-primary page-title" data-colname="Title">
-							<strong>
-								<a href="<?php echo esc_url( admin_url('?page=ftg-lite-gallery-admin&id='.absint($gallery->Id) ) ); ?>"><?php echo esc_html($gallery->name); ?></a>
-							</strong>
-							<div class="row-actions">
-								<span class="edit">
-									<a href="<?php echo esc_url( admin_url('?page=ftg-lite-gallery-admin&id=' . absint( $gallery->Id ) ) ); ?>" aria-label="Edit"><?php esc_html_e("Edit","final-tiles-grid-gallery-lite") ?></a> |
-								</span>
-								<span class="edit">
-									<a href="#" class="clone-gallery" data-gid="<?php echo absint($gallery->Id); ?>" aria-label="Clone"><?php esc_html_e("Clone gallery","final-tiles-grid-gallery-lite") ?></a> |
-								</span>
-								<span class="trash">
-									<a href="#delete-gallery-modal" data-gid="<?php echo absint($gallery->Id); ?>" class="modal-trigger submitdelete"><?php esc_html_e("Delete gallery", "final-tiles-grid-gallery-lite") ?></a>
-								</span>							
-							</div>
-						</td>
-						<td class="title column-title has-row-actions column-primary">
-							<?php echo wp_kses_post($gallery->description); ?>
-						</td>
-						<td class="title column-title has-row-actions column-primary">
-							<?php echo wp_kses_post($gallery->source); ?>
-						</td>
-						<td class="title column-title has-row-actions column-primary">
-                            <input readonly type="text" value="[FinalTilesGallery id='<?php echo absint($gallery->Id); ?>']" style="height:30px;">
-                            <a href="#" title="Click to copy shortcode" class="copy-ftg-shortcode button button-primary dashicons dashicons-format-gallery" style="width:40px;"></a><span style="margin-left:15px;"></span>
-						</td>
-					</tr>
-					<?php endforeach ?>
-				</tbody>	
+					<?php foreach ( $galleries as $gallery ) : ?>
+
+						<?php
+						// Permission check: admin/editor OR author of gallery
+						$can_edit = FinalTilesDB::getInstance()->canUserEdit( $gallery->Id );
+						?>
+
+						<tr id="gallery-<?php echo absint( $gallery->Id ); ?>"
+							class="iedit author-self level-0 post-10 type-post status-publish format-standard hentry">
+
+							<td class="title column-title has-row-actions column-primary page-title" data-colname="Title">
+								<strong>
+
+									<?php if ( $can_edit ) : ?>
+										<a href="<?php echo esc_url( admin_url( '?page=ftg-lite-gallery-admin&id=' . absint( $gallery->Id ) ) ); ?>">
+											<?php echo esc_html( $gallery->name ); ?>
+										</a>
+									<?php else : ?>
+										<span style="opacity:0.6; cursor:not-allowed;">
+											<?php echo esc_html( $gallery->name ); ?>
+										</span>
+									<?php endif; ?>
+
+								</strong>
+
+								<div class="row-actions">
+
+									<?php if ( $can_edit ) : ?>
+										<span class="edit">
+											<a href="<?php echo esc_url( admin_url( '?page=ftg-lite-gallery-admin&id=' . absint( $gallery->Id ) ) ); ?>"
+											aria-label="Edit"><?php esc_html_e( "Edit", "final-tiles-grid-gallery-lite" ); ?></a> |
+										</span>
+
+										<span class="edit">
+											<a href="#" class="clone-gallery" data-gid="<?php echo absint( $gallery->Id ); ?>"
+											aria-label="Clone"><?php esc_html_e( "Clone gallery", "final-tiles-grid-gallery-lite" ); ?></a> |
+										</span>
+
+										<span class="trash">
+											<a href="#delete-gallery-modal" data-gid="<?php echo absint( $gallery->Id ); ?>"
+											class="modal-trigger submitdelete"><?php esc_html_e( "Delete gallery", "final-tiles-grid-gallery-lite" ); ?></a>
+										</span>
+									<?php endif; ?>
+
+								</div>
+							</td>
+
+							<td class="title column-title has-row-actions column-primary">
+								<?php echo wp_kses_post( $gallery->description ); ?>
+							</td>
+
+							<td class="title column-title has-row-actions column-primary">
+								<?php echo wp_kses_post( $gallery->source ); ?>
+							</td>
+
+							<td class="title column-title has-row-actions column-primary">
+								<input readonly type="text"
+									value="[FinalTilesGallery id='<?php echo absint( $gallery->Id ); ?>']"
+									style="height:30px;">
+								<a href="#" title="Click to copy shortcode"
+								class="copy-ftg-shortcode button button-primary dashicons dashicons-format-gallery"
+								style="width:40px;"></a>
+								<span style="margin-left:15px;"></span>
+							</td>
+
+						</tr>
+
+					<?php endforeach; ?>
+				</tbody>
+
 			</table>
 		</div>
 		<div class="col s3">
@@ -214,26 +253,32 @@
 	        $("#shortcode-gallery-modal code").text("[FinalTilesGallery id='"+id+"']");
 	        $("#shortcode-gallery-modal").openModal();	   
         });
-        $("body").on("click", "#delete-gallery-modal .yes", function () {
-	        FTG.show_loading();
-            $.ajax({
-                url: ajaxurl,
-                data: {
-	                action: 'delete_gallery',
-	                id: galleryId,
-                    FinalTiles_gallery: $('#FinalTiles_gallery').val()
-                },
-                dataType: "json",
-                type: "post",
-                error: function(a, b, c) {
-                    console.log(a, b, c);
-                    FTG.hide_loading();
-                },
-                success: function(r) {
-	                $("#gallery-" + galleryId).remove();
-	                FTG.hide_loading();
-                }
-            });
-        });
+			$("body").on("click", "#delete-gallery-modal .yes", function () {
+				FTG.show_loading();
+
+				$.ajax({
+					url: ajaxurl,
+					data: {
+						action: 'delete_gallery',
+						id: galleryId,
+						FinalTiles_gallery: $('#FinalTiles_gallery').val()
+					},
+					dataType: "json",
+					type: "post",
+					error: function(a, b, c) {
+						console.log(a, b, c);
+						FTG.hide_loading();
+					},
+					success: function(r) {
+						if (r && r.success) {
+							$("#gallery-" + galleryId).remove();
+						} else {
+							console.warn("Delete failed:", r?.data || r);
+						}
+
+						FTG.hide_loading();
+					}
+				});
+			});
 	})(jQuery);
 </script>

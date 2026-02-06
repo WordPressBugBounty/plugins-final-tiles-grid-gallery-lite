@@ -41,6 +41,7 @@ var FTG = function($) {
             var post_type = '';
             var data = {
                 action: 'refresh_gallery',
+                galleryId: $("#gallery-id").val(),
                 source: source,
                 list_size: currentListSize,
                 FinalTiles_gallery: $('#FinalTiles_gallery').val(),
@@ -61,6 +62,7 @@ var FTG = function($) {
                             });
                             var data = {
                                 action: 'sort_images',
+                                galleryId: $("#gallery-id").val(),
                                 FinalTiles_gallery: $('#FinalTiles_gallery').val(),
                                 ids: ids.join(',')
                             };
@@ -371,6 +373,7 @@ var FTG = function($) {
 
                     var data = {
                         action: 'assign_group',
+                        galleryId: $("#gallery-id").val(),
                         FinalTiles_gallery: $('#FinalTiles_gallery').val(),
                         group: $("#group-name-to-assign").val(),
                         id: selected.join(",")
@@ -402,6 +405,7 @@ var FTG = function($) {
                     var data = {
                         action: 'assign_filters',
                         FinalTiles_gallery: $('#FinalTiles_gallery').val(),
+                        galleryId: $("#gallery-id").val(),
                         filters: filters.join("|"),
                         id: selected.join(","),
                         source: $("[name=ftg_source]").val()
@@ -743,6 +747,7 @@ var FTG = function($) {
 
                             var data = {
                                 action: 'toggle_visibility',
+                                galleryId: $("#gallery-id").val(),
                                 FinalTiles_gallery: $('#FinalTiles_gallery').val(),
                                 id: selected.join(",")
                             };
@@ -780,6 +785,7 @@ var FTG = function($) {
 
                                 var data = {
                                     action: 'assign_group',
+                                    galleryId: $("#gallery-id").val(),
                                     FinalTiles_gallery: $('#FinalTiles_gallery').val(),
                                     group: $(".panel input", $bulk).val(),
                                     id: selected.join(",")
@@ -836,6 +842,7 @@ var FTG = function($) {
                                 var data = {
                                     action: 'assign_filters',
                                     FinalTiles_gallery: $('#FinalTiles_gallery').val(),
+                                    galleryId: $("#gallery-id").val(),
                                     filters: filters.join("|"),
                                     id: selected.join(","),
                                     source: $("[name=ftg_source]").val()

@@ -2,8 +2,8 @@
 Contributors: wpchill, silkalns, freemius
 Tags: gallery, grid gallery, best gallery plugin, free gallery, gallery plugin, gallery grid plugin, masonry, photo gallery, image gallery, social gallery, portfolio gallery, lightbox, justified gallery
 Requires at least: 5.2
-Tested up to: 6.8
-Stable tag: 3.6.6
+Tested up to: 6.9
+Stable tag: 3.6.11
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -114,6 +114,10 @@ Currently galleries made with Envira, FooGallery, Instagram, NextGen, JetPack, M
 
 * Get priority support with a PRO license: http://www.final-tiles-gallery.com/wordpress/pricing
 
+= Where do I report security bugs found in this plugin? =
+
+Please report security bugs found in the source code of the Image Photo Gallery Final Tiles Grid plugin through the [Patchstack Vulnerability Disclosure  Program](https://patchstack.com/database/vdp/9e5fb4ae-3943-4318-a992-e766a61fc1d8). The Patchstack team will assist you with verification, CVE assignment, and notify the developers of this plugin."
+
 == Screenshots ==
 
 1. Gallery Example 1
@@ -124,6 +128,21 @@ Currently galleries made with Envira, FooGallery, Instagram, NextGen, JetPack, M
 6. 52 pages documentation
 
 == Changelog ==
+= 3.6.11 - 28.01.2026 =
+- Fixed: Security update
+
+= 3.6.10 - 09.01.2026 =
+- Fixed: Security update
+
+= 3.6.9 - 12.12.2025 =
+- Fixed: Security update
+
+= 3.6.8 - 11.12.2025 =
+- Fixed: Security update
+
+= 3.6.7 - 08.12.2025 =
+- Fixed: Security update
+
 = 3.6.6 - 14.08.2025 =
 - Fixed: Gallery configuration import fixes
 

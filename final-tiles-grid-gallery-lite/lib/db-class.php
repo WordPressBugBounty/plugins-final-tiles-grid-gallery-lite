@@ -100,6 +100,15 @@ if(! class_exists('FinalTilesDB'))
 
 			return $gallery->configuration;
 		}
+
+		public function canUserEdit( $gallery_id )
+		{
+			$gallery_config = json_decode( $this->getGalleryConfig( $gallery_id ), true );
+			$author_id = isset( $gallery_config['author_id'] ) ? absint( $gallery_config['author_id'] ) : 0;
+
+			return current_user_can( 'edit_others_posts' ) || ( $author_id === get_current_user_id() );
+
+		}
 		public function getGalleryById($id, $array=false) 
 		{
 			global $wpdb;

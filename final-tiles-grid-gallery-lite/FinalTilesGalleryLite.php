@@ -3,10 +3,10 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.6
+ * Version:                  3.6.11
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
- * Tested up to:             6.8
+ * Tested up to:             6.9
  * Requires:                 5.2 or higher
  * License:                  GPLv3 or later
  * License URI:              http://www.gnu.org/licenses/gpl-3.0.html
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.6' );
+define( 'FTGVERSION', '3.6.11' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -491,6 +491,9 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
         }
 
         public function ftg_shortcode_editor() {
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Unauthorized', 401 );
+            }
             $css_path = plugins_url( 'assets/css/admin.css', __FILE__ );
             $admin_url = admin_url();
             $galleries = $this->FinalTilesdb->getGalleries();
@@ -526,62 +529,84 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
 
         //Delete gallery
         public function delete_gallery() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) && isset( $_POST['id'] ) ) {
-                $this->FinalTilesdb->deleteGallery( intval( $_POST['id'] ) );
+            if ( !check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
+                wp_send_json_error( __( 'Invalid nonce', 'final-tiles-grid-gallery-lite' ) );
+                die;
             }
-            return array();
+            if ( empty( $_POST['id'] ) ) {
+                wp_send_json_error( __( 'Missing gallery ID.', 'final-tiles-grid-gallery-lite' ) );
+                die;
+            }
+            $gallery_id = intval( $_POST['id'] );
+            if ( !current_user_can( 'delete_others_posts' ) ) {
+                if ( !FinalTilesDB::getInstance()->canUserEdit( $gallery_id ) ) {
+                    wp_send_json_error( __( 'You are not allowed to delete this gallery.', 'final-tiles-grid-gallery-lite' ) );
+                    die;
+                }
+            }
+            $this->FinalTilesdb->deleteGallery( $gallery_id );
+            wp_send_json_success( __( 'The gallery has been deleted.', 'final-tiles-grid-gallery-lite' ) );
+            die;
         }
 
         public function update_configuration() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
-                $config = ( isset( $_POST['config'] ) ? wp_unslash( $_POST['config'] ) : '' );
-                // phpcs:ignore
-                if ( !empty( $config ) ) {
-                    $decoded = json_decode( $config );
-                    if ( json_last_error() !== JSON_ERROR_NONE ) {
-                        wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
-                    }
-                }
-                $this->FinalTilesdb->update_config( $id, $config );
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $id ) ) {
+                wp_die( 'Forbidden', 403 );
             }
+            $config = ( isset( $_POST['config'] ) ? wp_unslash( $_POST['config'] ) : '' );
+            // phpcs:ignore
+            if ( !empty( $config ) ) {
+                $decoded = json_decode( $config );
+                if ( json_last_error() !== JSON_ERROR_NONE ) {
+                    wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
+                }
+            }
+            $this->FinalTilesdb->update_config( $id, $config );
             exit;
         }
 
         public function get_configuration() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
-                $gallery = $this->FinalTilesdb->getGalleryConfig( $id );
-                echo stripslashes( $gallery );
-                // phpcs:ignore
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $id ) ) {
+                wp_die( 'Forbidden', 403 );
             }
-            exit;
+            $gallery = $this->FinalTilesdb->getGalleryConfig( $id );
+            echo stripslashes( $gallery );
+            // phpcs:ignore
+            die;
         }
 
         public function get_image_size_url() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $id = ( isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0 );
-                $size = ( isset( $_POST['size'] ) ? sanitize_text_field( wp_unslash( $_POST['size'] ) ) : 'thumbnail' );
-                echo esc_url( wp_get_attachment_image_url( $id, $size, false ) );
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
             }
+            $id = ( isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0 );
+            $size = ( isset( $_POST['size'] ) ? sanitize_text_field( wp_unslash( $_POST['size'] ) ) : 'thumbnail' );
+            echo esc_url( wp_get_attachment_image_url( $id, $size, false ) );
             exit;
         }
 
         //Clone gallery
         public function clone_gallery() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $sourceId = ( isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0 );
-                $g = $this->FinalTilesdb->getGalleryById( $sourceId, true );
-                $g['name'] .= ' (copy)';
-                $this->FinalTilesdb->addGallery( $g );
-                $id = $this->FinalTilesdb->getNewGalleryId();
-                $images = $this->FinalTilesdb->getImagesByGalleryId( $sourceId, 0, 0 );
-                foreach ( $images as &$image ) {
-                    $image->Id = null;
-                    $image->gid = $id;
-                }
-                $this->FinalTilesdb->addImages( $id, $images );
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
             }
+            $sourceId = ( isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0 );
+            $g = $this->FinalTilesdb->getGalleryById( $sourceId, true );
+            $g['name'] .= ' (copy)';
+            $this->FinalTilesdb->addGallery( $g );
+            $id = $this->FinalTilesdb->getNewGalleryId();
+            $images = $this->FinalTilesdb->getImagesByGalleryId( $sourceId, 0, 0 );
+            foreach ( $images as &$image ) {
+                $image->Id = null;
+                $image->gid = $id;
+            }
+            $this->FinalTilesdb->addImages( $id, $images );
             return array();
         }
 
@@ -611,6 +636,9 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
 
         //Admin Section - register scripts and styles
         public function gallery_admin_init() {
+            if ( isset( $_GET['page'] ) && 'ftg-lite-gallery-admin' === $_GET['page'] && isset( $_GET['id'] ) && !FinalTilesDB::getInstance()->canUserEdit( absint( $_GET['id'] ) ) ) {
+                wp_die( esc_html__( 'Sorry, you are not allowed to edit this gallery.', 'final-tiles-grid-gallery-lite' ) );
+            }
             if ( function_exists( 'wp_enqueue_media' ) ) {
                 wp_enqueue_media();
             }
@@ -795,9 +823,17 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
         }
 
         public function delete_image() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
-                foreach ( explode( ',', $ids ) as $id ) {
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
+            foreach ( explode( ',', $ids ) as $id ) {
+                $image = $this->FinalTilesdb->getImage( absint( $id ) );
+                if ( $image && !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                    wp_die( 'Forbidden', 403 );
+                }
+                if ( $image ) {
                     $this->FinalTilesdb->deleteImage( absint( $id ) );
                 }
             }
@@ -805,69 +841,80 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
         }
 
         public function assign_filters() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
-                $filters = ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' );
-                if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
-                    foreach ( explode( ',', $ids ) as $id ) {
-                        update_post_meta( absint( $id ), 'ftg_filters', sanitize_text_field( $filters ) );
-                    }
-                } else {
-                    foreach ( explode( ',', $ids ) as $id ) {
-                        $result = $this->FinalTilesdb->editImage( absint( $id ), array(
-                            'filters' => sanitize_text_field( $filters ),
-                        ) );
-                    }
-                }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gallery_id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gallery_id ) ) {
+                wp_die( 'Forbidden', 403 );
             }
-            wp_die();
-        }
-
-        public function toggle_visibility() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
+            $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
+            $filters = ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' );
+            if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
                 foreach ( explode( ',', $ids ) as $id ) {
-                    $image = $this->FinalTilesdb->getImage( $id );
-                    $this->FinalTilesdb->editImage( absint( $id ), array(
-                        'hidden' => ( $image->hidden == 'T' ? 'F' : 'T' ),
+                    update_post_meta( absint( $id ), 'ftg_filters', sanitize_text_field( $filters ) );
+                }
+            } else {
+                foreach ( explode( ',', $ids ) as $id ) {
+                    $result = $this->FinalTilesdb->editImage( absint( $id ), array(
+                        'filters' => sanitize_text_field( $filters ),
                     ) );
                 }
             }
             wp_die();
         }
 
+        public function toggle_visibility() {
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gallery_id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gallery_id ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
+            foreach ( explode( ',', $ids ) as $id ) {
+                $image = $this->FinalTilesdb->getImage( $id );
+                $this->FinalTilesdb->editImage( absint( $id ), array(
+                    'hidden' => ( $image->hidden == 'T' ? 'F' : 'T' ),
+                ) );
+            }
+            wp_die();
+        }
+
         public function assign_group() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
-                $group = ( isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '' );
-                if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
-                    foreach ( explode( ',', $ids ) as $id ) {
-                        update_post_meta( intval( $id ), 'ftg_group', sanitize_text_field( $group ) );
-                    }
-                } else {
-                    foreach ( explode( ',', $ids ) as $id ) {
-                        $result = $this->FinalTilesdb->editImage( $id, array(
-                            'group' => sanitize_text_field( $group ),
-                        ) );
-                    }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gallery_id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gallery_id ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
+            $group = ( isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '' );
+            if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
+                foreach ( explode( ',', $ids ) as $id ) {
+                    update_post_meta( intval( $id ), 'ftg_group', sanitize_text_field( $group ) );
+                }
+            } else {
+                foreach ( explode( ',', $ids ) as $id ) {
+                    $result = $this->FinalTilesdb->editImage( $id, array(
+                        'group' => sanitize_text_field( $group ),
+                    ) );
                 }
             }
             wp_die();
         }
 
         public function add_image() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $gid = ( isset( $_POST['galleryId'] ) ? intval( $_POST['galleryId'] ) : 0 );
-                $enc_images = ( isset( $_POST['enc_images'] ) ? wp_unslash( $_POST['enc_images'] ) : '' );
-                // phpcs:ignore
-                $images = json_decode( $enc_images );
-                $result = $this->FinalTilesdb->addImages( $gid, $images );
-                header( 'Content-type: application/json' );
-                if ( $result === false ) {
-                    echo '{"success":false}';
-                } else {
-                    echo '{"success":true}';
-                }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gid = ( isset( $_POST['galleryId'] ) ? intval( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gid ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $enc_images = ( isset( $_POST['enc_images'] ) ? wp_unslash( $_POST['enc_images'] ) : '' );
+            // phpcs:ignore
+            $images = json_decode( $enc_images );
+            $result = $this->FinalTilesdb->addImages( $gid, $images );
+            header( 'Content-type: application/json' );
+            if ( $result === false ) {
+                echo '{"success":false}';
+            } else {
+                echo '{"success":true}';
             }
             wp_die();
         }
@@ -887,357 +934,396 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
         }
 
         public function sort_images() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $ids = ( isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : 0 );
-                $result = $this->FinalTilesdb->sortImages( explode( ',', $ids ) );
-                header( 'Content-type: application/json' );
-                if ( $result === false ) {
-                    echo '{"success":false}';
-                } else {
-                    echo '{"success":true}';
-                }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gallery_id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gallery_id ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $ids = ( isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : 0 );
+            $result = $this->FinalTilesdb->sortImages( explode( ',', $ids ) );
+            header( 'Content-type: application/json' );
+            if ( $result === false ) {
+                echo '{"success":false}';
+            } else {
+                echo '{"success":true}';
             }
             wp_die();
         }
 
         public function load_chunk() {
             require_once 'lib/gallery-class.php';
-            if ( check_admin_referer( 'finaltilesgallery', 'finaltilesgallery' ) ) {
-                $gid = ( isset( $_POST['gallery'] ) ? intval( $_POST['gallery'] ) : 0 );
-                $images = $this->FinalTilesdb->getImagesByGalleryId( $gid, 0, 0 );
-                $FinalTilesGallery = new FinalTilesGallery($gid, $this->FinalTilesdb, $this->defaultValues);
-                echo $FinalTilesGallery->images_markup();
-                // phpcs:ignore
-            }
+            check_admin_referer( 'finaltilesgallery', 'finaltilesgallery' );
+            $gid = ( isset( $_POST['gallery'] ) ? intval( $_POST['gallery'] ) : 0 );
+            $images = $this->FinalTilesdb->getImagesByGalleryId( $gid, 0, 0 );
+            $FinalTilesGallery = new FinalTilesGallery($gid, $this->FinalTilesdb, $this->defaultValues);
+            echo $FinalTilesGallery->images_markup();
+            // phpcs:ignore
             wp_die();
         }
 
         public function refresh_gallery() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                if ( isset( $_POST['source'] ) && sanitize_text_field( wp_unslash( $_POST['source'] ) ) == 'images' ) {
-                    $this->list_images();
-                }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gallery_id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gallery_id ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            if ( isset( $_POST['source'] ) && sanitize_text_field( wp_unslash( $_POST['source'] ) ) === 'images' ) {
+                $this->list_images();
             }
         }
 
         public function save_image() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $result = false;
-                if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
-                    $result = true;
-                    $postId = ( isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0 );
-                    $img_url = ( isset( $_POST['img_url'] ) ? esc_url_raw( $_POST['img_url'] ) : '' );
-                    update_post_meta( $postId, 'ftg_image_url', esc_url_raw( $img_url ) );
-                    if ( array_key_exists( 'filters', $_POST ) && strlen( sanitize_text_field( wp_unslash( $_POST['filters'] ) ) ) ) {
-                        update_post_meta( $postId, 'ftg_filters', sanitize_text_field( wp_unslash( $_POST['filters'] ) ) );
-                    }
-                } else {
-                    $type = ( isset( $_POST['type'] ) ? sanitize_text_field( wp_unslash( $_POST['type'] ) ) : '' );
-                    $imageUrl = ( isset( $_POST['img_url'] ) ? esc_url_raw( $_POST['img_url'] ) : '' );
-                    $imageCaption = ( isset( $_POST['description'] ) ? wp_kses_post( wp_unslash( $_POST['description'] ) ) : '' );
-                    $filters = ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' );
-                    $title = ( isset( $_POST['imageTitle'] ) ? wp_kses_post( wp_unslash( $_POST['imageTitle'] ) ) : '' );
-                    $target = ( isset( $_POST['target'] ) ? sanitize_text_field( wp_unslash( $_POST['target'] ) ) : '' );
-                    $group = ( isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '' );
-                    $alt = ( isset( $_POST['alt'] ) ? sanitize_text_field( wp_unslash( $_POST['alt'] ) ) : '' );
-                    $hidden = $this->checkboxVal( 'hidden' );
-                    $link = ( isset( $_POST['link'] ) ? esc_url_raw( wp_unslash( $_POST['link'] ) ) : null );
-                    $imageId = ( isset( $_POST['img_id'] ) ? intval( wp_unslash( $_POST['img_id'] ) ) : 0 );
-                    $sortOrder = ( isset( $_POST['sortOrder'] ) ? intval( wp_unslash( $_POST['sortOrder'] ) ) : 0 );
-                    $data = array(
-                        'imagePath'   => $imageUrl,
-                        'target'      => $target,
-                        'link'        => $link,
-                        'imageId'     => $imageId,
-                        'description' => $imageCaption,
-                        'filters'     => $filters,
-                        'title'       => $title,
-                        'group'       => $group,
-                        'alt'         => $alt,
-                        'hidden'      => $hidden,
-                        'sortOrder'   => $sortOrder,
-                    );
-                    if ( !empty( $_POST['id'] ) ) {
-                        $imageId = intval( $_POST['id'] );
-                        $result = $this->FinalTilesdb->editImage( $imageId, $data );
-                    } else {
-                        $data['gid'] = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
-                        $result = $this->FinalTilesdb->addFullImage( $data );
-                    }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $result = false;
+            if ( isset( $_POST['source'] ) && $_POST['source'] === 'posts' ) {
+                $result = true;
+                $postId = ( isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0 );
+                $img_url = ( isset( $_POST['img_url'] ) ? esc_url_raw( $_POST['img_url'] ) : '' );
+                update_post_meta( $postId, 'ftg_image_url', esc_url_raw( $img_url ) );
+                if ( array_key_exists( 'filters', $_POST ) && strlen( sanitize_text_field( wp_unslash( $_POST['filters'] ) ) ) ) {
+                    update_post_meta( $postId, 'ftg_filters', sanitize_text_field( wp_unslash( $_POST['filters'] ) ) );
                 }
-                header( 'Content-type: application/json' );
-                if ( $result === false ) {
-                    echo '{"success":false}';
+            } else {
+                $type = ( isset( $_POST['type'] ) ? sanitize_text_field( wp_unslash( $_POST['type'] ) ) : '' );
+                $imageUrl = ( isset( $_POST['img_url'] ) ? esc_url_raw( $_POST['img_url'] ) : '' );
+                $imageCaption = ( isset( $_POST['description'] ) ? wp_kses_post( wp_unslash( $_POST['description'] ) ) : '' );
+                $filters = ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' );
+                $title = ( isset( $_POST['imageTitle'] ) ? wp_kses_post( wp_unslash( $_POST['imageTitle'] ) ) : '' );
+                $target = ( isset( $_POST['target'] ) ? sanitize_text_field( wp_unslash( $_POST['target'] ) ) : '' );
+                $group = ( isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '' );
+                $alt = ( isset( $_POST['alt'] ) ? sanitize_text_field( wp_unslash( $_POST['alt'] ) ) : '' );
+                $hidden = $this->checkboxVal( 'hidden' );
+                $link = ( isset( $_POST['link'] ) ? esc_url_raw( wp_unslash( $_POST['link'] ) ) : null );
+                $imageId = ( isset( $_POST['img_id'] ) ? intval( wp_unslash( $_POST['img_id'] ) ) : 0 );
+                $sortOrder = ( isset( $_POST['sortOrder'] ) ? intval( wp_unslash( $_POST['sortOrder'] ) ) : 0 );
+                $data = array(
+                    'imagePath'   => $imageUrl,
+                    'target'      => $target,
+                    'link'        => $link,
+                    'imageId'     => $imageId,
+                    'description' => $imageCaption,
+                    'filters'     => $filters,
+                    'title'       => $title,
+                    'group'       => $group,
+                    'alt'         => $alt,
+                    'hidden'      => $hidden,
+                    'sortOrder'   => $sortOrder,
+                );
+                if ( !empty( $_POST['id'] ) ) {
+                    $imageId = intval( $_POST['id'] );
+                    $image = $this->FinalTilesdb->getImage( $imageId );
+                    if ( $image && !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                        wp_die( 'Forbidden', 403 );
+                    }
+                    $result = $this->FinalTilesdb->editImage( $imageId, $data );
                 } else {
-                    echo '{"success":true}';
+                    $data['gid'] = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+                    if ( !$this->FinalTilesdb->canUserEdit( $data['gid'] ) ) {
+                        wp_die( 'Forbidden', 403 );
+                    }
+                    $result = $this->FinalTilesdb->addFullImage( $data );
                 }
+            }
+            header( 'Content-type: application/json' );
+            if ( $result === false ) {
+                echo '{"success":false}';
+            } else {
+                echo '{"success":true}';
             }
             wp_die();
         }
 
         public function save_video() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $result = false;
-                $type = ( isset( $_POST['type'] ) ? sanitize_text_field( wp_unslash( $_POST['type'] ) ) : '' );
-                $data = array(
-                    "imagePath" => wp_unslash( $_POST["embed"] ),
-                    'filters'   => ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' ),
-                    'gid'       => ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 ),
-                );
-                $id = ( isset( $_POST['id'] ) ? absint( $_POST['id'] ) : '' );
-                $step = ( isset( $_POST['step'] ) ? sanitize_text_field( wp_unslash( $_POST['step'] ) ) : '' );
-                if ( !empty( $step ) ) {
-                    if ( $step == 'add' ) {
-                        $result = $this->FinalTilesdb->addVideo( $data );
-                    } elseif ( $step == 'edit' ) {
-                        $result = $this->FinalTilesdb->editVideo( $id, $data );
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
+            $result = false;
+            $type = ( isset( $_POST['type'] ) ? sanitize_text_field( wp_unslash( $_POST['type'] ) ) : '' );
+            $data = array(
+                "imagePath" => wp_unslash( $_POST["embed"] ),
+                'filters'   => ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' ),
+                'gid'       => ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 ),
+            );
+            $id = ( isset( $_POST['id'] ) ? absint( $_POST['id'] ) : '' );
+            $step = ( isset( $_POST['step'] ) ? sanitize_text_field( wp_unslash( $_POST['step'] ) ) : '' );
+            if ( !empty( $step ) ) {
+                if ( $step == 'add' ) {
+                    if ( !$this->FinalTilesdb->canUserEdit( $data['gid'] ) ) {
+                        wp_die( 'Forbidden', 403 );
                     }
+                    $result = $this->FinalTilesdb->addVideo( $data );
+                } elseif ( $step == 'edit' ) {
+                    $video = $this->FinalTilesdb->getImage( $id );
+                    if ( $video && !$this->FinalTilesdb->canUserEdit( $video->gid ) ) {
+                        wp_die( 'Forbidden', 403 );
+                    }
+                    $result = $this->FinalTilesdb->editVideo( $id, $data );
                 }
-                header( 'Content-type: application/json' );
-                if ( $result === false ) {
-                    echo '{"success":false}';
-                } else {
-                    echo '{"success":true}';
-                }
+            }
+            header( 'Content-type: application/json' );
+            if ( $result === false ) {
+                echo '{"success":false}';
+            } else {
+                echo '{"success":true}';
             }
             wp_die();
         }
 
         public function list_images() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $gid = ( isset( $_POST['gid'] ) ? absint( $_POST['gid'] ) : 0 );
-                $imageResults = $this->FinalTilesdb->getImagesByGalleryId( $gid, 0, 0 );
-                $gallery = $this->FinalTilesdb->getGalleryById( $gid );
-                $list_size = 'medium';
-                $column_size = 's6 m3 l3';
-                if ( isset( $_POST['list_size'] ) && !empty( $_POST['list_size'] ) ) {
-                    $list_size = sanitize_text_field( wp_unslash( $_POST['list_size'] ) );
-                }
-                setcookie( 'ftg_imglist_size', $list_size );
-                $_COOKIE['ftg_imglist_size'] = $list_size;
-                if ( $list_size == 'small' ) {
-                    $column_size = 's4 m2 l2';
-                }
-                if ( $list_size == 'medium' ) {
-                    $column_size = 's6 m3 l3';
-                }
-                if ( $list_size == 'big' ) {
-                    $column_size = 's12 m4 l4';
-                }
-                include 'admin/include/image-list.php';
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $gid = ( isset( $_POST['gid'] ) ? absint( $_POST['gid'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $gid ) ) {
+                wp_die( 'Forbidden', 403 );
             }
+            $imageResults = $this->FinalTilesdb->getImagesByGalleryId( $gid, 0, 0 );
+            $gallery = $this->FinalTilesdb->getGalleryById( $gid );
+            $list_size = 'medium';
+            $column_size = 's6 m3 l3';
+            if ( isset( $_POST['list_size'] ) && !empty( $_POST['list_size'] ) ) {
+                $list_size = sanitize_text_field( wp_unslash( $_POST['list_size'] ) );
+            }
+            setcookie( 'ftg_imglist_size', $list_size );
+            $_COOKIE['ftg_imglist_size'] = $list_size;
+            if ( $list_size == 'small' ) {
+                $column_size = 's4 m2 l2';
+            }
+            if ( $list_size == 'medium' ) {
+                $column_size = 's6 m3 l3';
+            }
+            if ( $list_size == 'big' ) {
+                $column_size = 's12 m4 l4';
+            }
+            include 'admin/include/image-list.php';
             wp_die();
         }
 
         public function add_new_gallery() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $data = $this->defaultValues;
-                // phpcs:ignore
-                $data["name"] = ( isset( $_POST['ftg_name'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_name'] ) ) : '' );
-                // phpcs:ignore
-                $data["description"] = ( isset( $_POST['ftg_description'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_description'] ) ) : '' );
-                $data['source'] = ( isset( $_POST['ftg_source'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_source'] ) ) : '' );
-                $data['wp_field_caption'] = ( isset( $_POST['ftg_wp_field_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_caption'] ) ) : '' );
-                $data['wp_field_title'] = ( isset( $_POST['ftg_wp_field_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_title'] ) ) : '' );
-                $data['captionEffect'] = ( isset( $_POST['ftg_captionEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEffect'] ) ) : '' );
-                $data['post_types'] = ( isset( $_POST['post_types'] ) ? sanitize_text_field( wp_unslash( $_POST['post_types'] ) ) : '' );
-                $data['layout'] = ( isset( $_POST['layout'] ) ? sanitize_text_field( wp_unslash( $_POST['layout'] ) ) : '' );
-                $data['defaultWooImageSize'] = ( isset( $_POST['def_imgsize'] ) ? sanitize_text_field( wp_unslash( $_POST['def_imgsize'] ) ) : '' );
-                $data['defaultPostImageSize'] = ( isset( $_POST['def_imgsize'] ) ? sanitize_text_field( wp_unslash( $_POST['def_imgsize'] ) ) : '' );
-                $data['woo_categories'] = ( isset( $_POST['woo_categories'] ) ? sanitize_text_field( wp_unslash( $_POST['woo_categories'] ) ) : '' );
-                $result = $this->FinalTilesdb->addGallery( $data );
-                $id = $this->FinalTilesdb->getNewGalleryId();
-                // phpcs:ignore
-                if ( $id > 0 && array_key_exists( 'enc_images', $_POST ) && strlen( wp_unslash( $_POST['enc_images'] ) ) ) {
-                    $images = json_decode( wp_unslash( $_POST['enc_images'] ) );
-                    $result = $this->FinalTilesdb->addImages( $id, $images );
-                }
-                echo absint( $id );
-            } else {
-                echo -1;
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $id = ( isset( $_POST['galleryId'] ) ? absint( $_POST['galleryId'] ) : 0 );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
             }
+            $data = $this->defaultValues;
+            // phpcs:ignore
+            $data["name"] = ( isset( $_POST['ftg_name'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_name'] ) ) : '' );
+            // phpcs:ignore
+            $data["author_id"] = ( isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() );
+            $data['description'] = ( isset( $_POST['ftg_description'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_description'] ) ) : '' );
+            $data['source'] = ( isset( $_POST['ftg_source'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_source'] ) ) : '' );
+            $data['wp_field_caption'] = ( isset( $_POST['ftg_wp_field_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_caption'] ) ) : '' );
+            $data['wp_field_title'] = ( isset( $_POST['ftg_wp_field_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_title'] ) ) : '' );
+            $data['captionEffect'] = ( isset( $_POST['ftg_captionEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEffect'] ) ) : '' );
+            $data['post_types'] = ( isset( $_POST['post_types'] ) ? sanitize_text_field( wp_unslash( $_POST['post_types'] ) ) : '' );
+            $data['layout'] = ( isset( $_POST['layout'] ) ? sanitize_text_field( wp_unslash( $_POST['layout'] ) ) : '' );
+            $data['defaultWooImageSize'] = ( isset( $_POST['def_imgsize'] ) ? sanitize_text_field( wp_unslash( $_POST['def_imgsize'] ) ) : '' );
+            $data['defaultPostImageSize'] = ( isset( $_POST['def_imgsize'] ) ? sanitize_text_field( wp_unslash( $_POST['def_imgsize'] ) ) : '' );
+            $data['woo_categories'] = ( isset( $_POST['woo_categories'] ) ? sanitize_text_field( wp_unslash( $_POST['woo_categories'] ) ) : '' );
+            $result = $this->FinalTilesdb->addGallery( $data );
+            $id = $this->FinalTilesdb->getNewGalleryId();
+            // phpcs:ignore
+            if ( $id > 0 && array_key_exists( 'enc_images', $_POST ) && strlen( wp_unslash( $_POST['enc_images'] ) ) ) {
+                $images = json_decode( wp_unslash( $_POST['enc_images'] ) );
+                $result = $this->FinalTilesdb->addImages( $id, $images );
+            }
+            echo absint( $id );
             wp_die();
         }
 
         private function checkboxVal( $field ) {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                if ( isset( $_POST[$field] ) ) {
-                    return 'T';
-                }
-                return 'F';
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            if ( !current_user_can( 'edit_posts' ) ) {
+                wp_die( 'Forbidden', 403 );
             }
-            wp_die();
+            if ( isset( $_POST[$field] ) ) {
+                return 'T';
+            }
+            return 'F';
         }
 
         public function save_gallery() {
-            if ( check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' ) ) {
-                $galleryName = ( isset( $_POST['ftg_name'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_name'] ) ) : '' );
-                $galleryDescription = ( isset( $_POST['ftg_description'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_description'] ) ) : '' );
-                $slug = strtolower( str_replace( ' ', '', $galleryName ) );
-                $margin = ( isset( $_POST['ftg_margin'] ) ? absint( $_POST['ftg_margin'] ) : '' );
-                $minTileWidth = ( isset( $_POST['ftg_minTileWidth'] ) ? absint( $_POST['ftg_minTileWidth'] ) : '' );
-                $gridCellSize = ( isset( $_POST['ftg_gridCellSize'] ) ? absint( $_POST['ftg_gridCellSize'] ) : '' );
-                $imagesOrder = ( isset( $_POST['ftg_imagesOrder'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_imagesOrder'] ) ) : '' );
-                $width = ( isset( $_POST['ftg_width'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_width'] ) ) : '' );
-                $enableTwitter = $this->checkboxVal( 'ftg_enableTwitter' );
-                $filterClick = $this->checkboxVal( 'ftg_filterClick' );
-                $enableFacebook = $this->checkboxVal( 'ftg_enableFacebook' );
-                $enablePinterest = $this->checkboxVal( 'ftg_enablePinterest' );
-                $lightbox = ( isset( $_POST['ftg_lightbox'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightbox'] ) ) : '' );
-                $mobileLightbox = ( isset( $_POST['ftg_mobileLightbox'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_mobileLightbox'] ) ) : '' );
-                $blank = $this->checkboxVal( 'ftg_blank' );
-                $filters = ( isset( $_POST['ftg_filters'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_filters'] ) ) : '' );
-                $scrollEffect = ( isset( $_POST['ftg_scrollEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_scrollEffect'] ) ) : '' );
-                $captionBehavior = ( isset( $_POST['ftg_captionBehavior'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionBehavior'] ) ) : '' );
-                $captionMobileBehavior = ( isset( $_POST['ftg_captionMobileBehavior'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionMobileBehavior'] ) ) : '' );
-                $captionEffect = ( isset( $_POST['ftg_captionEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEffect'] ) ) : '' );
-                $captionColor = ( isset( $_POST['ftg_captionColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionColor'] ) ) : '' );
-                $captionBackgroundColor = ( isset( $_POST['ftg_captionBackgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionBackgroundColor'] ) ) : '' );
-                $captionEasing = ( isset( $_POST['ftg_captionEasing'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEasing'] ) ) : '' );
-                $captionHorizontalAlignment = ( isset( $_POST['ftg_captionHorizontalAlignment'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionHorizontalAlignment'] ) ) : '' );
-                $captionVerticalAlignment = ( isset( $_POST['ftg_captionVerticalAlignment'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionVerticalAlignment'] ) ) : '' );
-                $captionEmpty = ( isset( $_POST['ftg_captionEmpty'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEmpty'] ) ) : '' );
-                $captionOpacity = ( isset( $_POST['ftg_captionOpacity'] ) ? absint( $_POST['ftg_captionOpacity'] ) : '' );
-                $borderSize = ( isset( $_POST['ftg_borderSize'] ) ? absint( $_POST['ftg_borderSize'] ) : '' );
-                $borderColor = ( isset( $_POST['ftg_borderColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_borderColor'] ) ) : '' );
-                $titleFontSize = ( isset( $_POST['ftg_titleFontSize'] ) ? absint( $_POST['ftg_titleFontSize'] ) : '' );
-                $loadingBarColor = ( isset( $_POST['ftg_loadingBarColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_loadingBarColor'] ) ) : '' );
-                $loadingBarBackgroundColor = ( isset( $_POST['ftg_loadingBarBackgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_loadingBarBackgroundColor'] ) ) : '' );
-                $borderRadius = ( isset( $_POST['ftg_borderRadius'] ) ? absint( $_POST['ftg_borderRadius'] ) : '' );
-                $allFilterLabel = ( isset( $_POST['ftg_allFilterLabel'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_allFilterLabel'] ) ) : '' );
-                $shadowColor = ( isset( $_POST['ftg_shadowColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_shadowColor'] ) ) : '' );
-                $shadowSize = ( isset( $_POST['ftg_shadowSize'] ) ? absint( $_POST['ftg_shadowSize'] ) : '' );
-                $enlargeImages = $this->checkboxVal( 'ftg_enlargeImages' );
-                $wp_field_caption = ( isset( $_POST['ftg_wp_field_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_caption'] ) ) : '' );
-                $wp_field_title = ( isset( $_POST['ftg_wp_field_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_title'] ) ) : '' );
-                $style = ( isset( $_POST['ftg_style'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ftg_style'] ) ) : '' );
-                $script = ( isset( $_POST['ftg_script'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ftg_script'] ) ) : '' );
-                $loadedHSlide = ( isset( $_POST['ftg_loadedHSlide'] ) ? intval( wp_unslash( $_POST['ftg_loadedHSlide'] ) ) : '' );
-                $loadedVSlide = ( isset( $_POST['ftg_loadedVSlide'] ) ? intval( wp_unslash( $_POST['ftg_loadedVSlide'] ) ) : '' );
-                $captionEffectDuration = ( isset( $_POST['ftg_captionEffectDuration'] ) ? absint( $_POST['ftg_captionEffectDuration'] ) : 250 );
-                $id = ( isset( $_POST['ftg_gallery_edit'] ) ? absint( $_POST['ftg_gallery_edit'] ) : 0 );
-                $data = array(
-                    'ajaxLoading'                         => ( isset( $_POST['ftg_ajaxLoading'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_ajaxLoading'] ) ) : '' ),
-                    'layout'                              => ( isset( $_POST['ftg_layout'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_layout'] ) ) : '' ),
-                    'name'                                => $galleryName,
-                    'slug'                                => $slug,
-                    'description'                         => $galleryDescription,
-                    'lightbox'                            => $lightbox,
-                    'lightboxOptions'                     => ( isset( $_POST['ftg_lightboxOptions'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxOptions'] ) ) : '' ),
-                    'lightboxOptionsMobile'               => ( isset( $_POST['lightboxOptionsMobile'] ) ? sanitize_text_field( wp_unslash( $_POST['lightboxOptionsMobile'] ) ) : '' ),
-                    'mobileLightbox'                      => $mobileLightbox,
-                    'lightboxImageSize'                   => ( isset( $_POST['ftg_lightboxImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxImageSize'] ) ) : '' ),
-                    'blank'                               => $blank,
-                    'margin'                              => $margin,
-                    'allFilterLabel'                      => $allFilterLabel,
-                    'minTileWidth'                        => $minTileWidth,
-                    'gridCellSize'                        => $gridCellSize,
-                    'gridCellSizeDisabledBelow'           => ( isset( $_POST['ftg_gridCellSizeDisabledBelow'] ) ? absint( $_POST['ftg_gridCellSizeDisabledBelow'] ) : '' ),
-                    'enableTwitter'                       => $enableTwitter,
-                    'backgroundColor'                     => ( isset( $_POST['ftg_backgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_backgroundColor'] ) ) : '' ),
-                    'filterClick'                         => $filterClick,
-                    'disableLightboxGroups'               => $this->checkboxVal( 'ftg_disableLightboxGroups' ),
-                    'defaultFilter'                       => ( isset( $_POST['ftg_filterDef'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_filterDef'] ) ) : '' ),
-                    'enableFacebook'                      => $enableFacebook,
-                    'enablePinterest'                     => $enablePinterest,
-                    'imagesOrder'                         => $imagesOrder,
-                    'compressHTML'                        => $this->checkboxVal( 'ftg_compressHTML' ),
-                    'loadMethod'                          => ( isset( $_POST['ftg_loadMethod'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_loadMethod'] ) ) : '' ),
-                    'socialIconColor'                     => ( isset( $_POST['ftg_socialIconColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_socialIconColor'] ) ) : '' ),
-                    'socialIconPosition'                  => ( isset( $_POST['ftg_socialIconPosition'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_socialIconPosition'] ) ) : '' ),
-                    'socialIconStyle'                     => ( isset( $_POST['ftg_socialIconStyle'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_socialIconStyle'] ) ) : '' ),
-                    'recentPostsCaption'                  => ( isset( $_POST['ftg_recentPostsCaption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_recentPostsCaption'] ) ) : '' ),
-                    'recentPostsCaptionAutoExcerptLength' => ( isset( $_POST['ftg_recentPostsCaptionAutoExcerptLength'] ) ? intval( wp_unslash( $_POST['ftg_recentPostsCaptionAutoExcerptLength'] ) ) : '' ),
-                    'captionBehavior'                     => $captionBehavior,
-                    'captionEffect'                       => $captionEffect,
-                    'captionEmpty'                        => $captionEmpty,
-                    'captionBackgroundColor'              => $captionBackgroundColor,
-                    'captionColor'                        => $captionColor,
-                    'captionCustomFields'                 => ( isset( $_POST['ftg_captionCustomFields'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_captionCustomFields'] ) ) : '' ),
-                    'captionFrameColor'                   => ( isset( $_POST['ftg_captionFrameColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionFrameColor'] ) ) : '' ),
-                    'captionEffectDuration'               => $captionEffectDuration,
-                    'captionEasing'                       => $captionEasing,
-                    'captionVerticalAlignment'            => $captionVerticalAlignment,
-                    'captionHorizontalAlignment'          => $captionHorizontalAlignment,
-                    'captionMobileBehavior'               => $captionMobileBehavior,
-                    'captionOpacity'                      => $captionOpacity,
-                    'captionIcon'                         => ( isset( $_POST['ftg_captionIcon'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionIcon'] ) ) : '' ),
-                    'captionFrame'                        => $this->checkboxVal( 'ftg_captionFrame' ),
-                    'customCaptionIcon'                   => ( isset( $_POST['ftg_customCaptionIcon'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_customCaptionIcon'] ) ) : '' ),
-                    'captionIconColor'                    => ( isset( $_POST['ftg_captionIconColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionIconColor'] ) ) : '' ),
-                    'captionIconSize'                     => ( isset( $_POST['ftg_captionIconSize'] ) ? absint( $_POST['ftg_captionIconSize'] ) : '' ),
-                    'captionFontSize'                     => ( isset( $_POST['ftg_captionFontSize'] ) ? absint( $_POST['ftg_captionFontSize'] ) : '' ),
-                    'captionPosition'                     => ( isset( $_POST['ftg_captionPosition'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionPosition'] ) ) : '' ),
-                    'titleFontSize'                       => ( isset( $_POST['ftg_titleFontSize'] ) ? absint( $_POST['ftg_titleFontSize'] ) : '' ),
-                    'hoverZoom'                           => ( isset( $_POST['ftg_hoverZoom'] ) ? absint( $_POST['ftg_hoverZoom'] ) : '' ),
-                    'hoverRotation'                       => ( isset( $_POST['ftg_hoverRotation'] ) ? intval( wp_unslash( $_POST['ftg_hoverRotation'] ) ) : '' ),
-                    'hoverDuration'                       => ( isset( $_POST['ftg_hoverDuration'] ) ? intval( wp_unslash( $_POST['ftg_hoverDuration'] ) ) : '' ),
-                    'hoverIconRotation'                   => $this->checkboxVal( 'ftg_hoverIconRotation' ),
-                    'filters'                             => $filters,
-                    'wp_field_caption'                    => $wp_field_caption,
-                    'wp_field_title'                      => $wp_field_title,
-                    'borderSize'                          => $borderSize,
-                    'borderColor'                         => $borderColor,
-                    'loadingBarColor'                     => $loadingBarColor,
-                    'loadingBarBackgroundColor'           => $loadingBarBackgroundColor,
-                    'enlargeImages'                       => $enlargeImages,
-                    'borderRadius'                        => $borderRadius,
-                    'imageSizeFactor'                     => ( isset( $_POST['ftg_imageSizeFactor'] ) ? absint( $_POST['ftg_imageSizeFactor'] ) : '' ),
-                    'imageSizeFactorTabletLandscape'      => ( isset( $_POST['ftg_imageSizeFactorTabletLandscape'] ) ? absint( $_POST['ftg_imageSizeFactorTabletLandscape'] ) : '' ),
-                    'imageSizeFactorTabletPortrait'       => ( isset( $_POST['ftg_imageSizeFactorTabletPortrait'] ) ? absint( $_POST['ftg_imageSizeFactorTabletPortrait'] ) : '' ),
-                    'imageSizeFactorPhoneLandscape'       => ( isset( $_POST['ftg_imageSizeFactorPhoneLandscape'] ) ? absint( $_POST['ftg_imageSizeFactorPhoneLandscape'] ) : '' ),
-                    'imageSizeFactorPhonePortrait'        => ( isset( $_POST['ftg_imageSizeFactorPhonePortrait'] ) ? absint( $_POST['ftg_imageSizeFactorPhonePortrait'] ) : '' ),
-                    'imageSizeFactorCustom'               => ( isset( $_POST['ftg_imageSizeFactorCustom'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_imageSizeFactorCustom'] ) ) : '' ),
-                    'taxonomyAsFilter'                    => ( isset( $_POST['ftg_taxonomyAsFilter'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_taxonomyAsFilter'] ) ) : '' ),
-                    'columns'                             => ( isset( $_POST['ftg_columns'] ) ? intval( wp_unslash( $_POST['ftg_columns'] ) ) : '' ),
-                    'columnsTabletLandscape'              => ( isset( $_POST['ftg_columnsTabletLandscape'] ) ? absint( $_POST['ftg_columnsTabletLandscape'] ) : '' ),
-                    'columnsTabletPortrait'               => ( isset( $_POST['ftg_columnsTabletPortrait'] ) ? absint( $_POST['ftg_columnsTabletPortrait'] ) : '' ),
-                    'columnsPhoneLandscape'               => ( isset( $_POST['ftg_columnsPhoneLandscape'] ) ? absint( $_POST['ftg_columnsPhoneLandscape'] ) : '' ),
-                    'columnsPhonePortrait'                => ( isset( $_POST['ftg_columnsPhonePortrait'] ) ? absint( $_POST['ftg_columnsPhonePortrait'] ) : '' ),
-                    'max_posts'                           => ( isset( $_POST['ftg_max_posts'] ) ? absint( $_POST['ftg_max_posts'] ) : '' ),
-                    'shadowSize'                          => $shadowSize,
-                    'shadowColor'                         => $shadowColor,
-                    'source'                              => ( isset( $_POST['ftg_source'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_source'] ) ) : '' ),
-                    'post_types'                          => ( isset( $_POST['ftg_post_types'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_types'] ) ) : '' ),
-                    'post_taxonomies'                     => ( isset( $_POST['ftg_post_taxonomies'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_taxonomies'] ) ) : '' ),
-                    'taxonomyOperator'                    => ( isset( $_POST['ftg_taxonomyOperator'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_taxonomyOperator'] ) ) : '' ),
-                    'post_tags'                           => ( isset( $_POST['ftg_post_tags'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_tags'] ) ) : '' ),
-                    'tilesPerPage'                        => ( isset( $_POST['ftg_tilesPerPage'] ) ? absint( $_POST['ftg_tilesPerPage'] ) : '' ),
-                    'woo_categories'                      => ( isset( $_POST['ftg_woo_categories'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_woo_categories'] ) ) : '' ),
-                    'defaultPostImageSize'                => ( isset( $_POST['ftg_defaultPostImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_defaultPostImageSize'] ) ) : '' ),
-                    'defaultWooImageSize'                 => ( isset( $_POST['ftg_defaultWooImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_defaultWooImageSize'] ) ) : '' ),
-                    'width'                               => $width,
-                    'beforeGalleryText'                   => ( isset( $_POST['ftg_beforeGalleryText'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_beforeGalleryText'] ) ) : '' ),
-                    'afterGalleryText'                    => ( isset( $_POST['ftg_afterGalleryText'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_afterGalleryText'] ) ) : '' ),
-                    'aClass'                              => ( isset( $_POST['ftg_aClass'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_aClass'] ) ) : '' ),
-                    'rel'                                 => ( isset( $_POST['ftg_rel'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_rel'] ) ) : '' ),
-                    'style'                               => $style,
-                    'delay'                               => ( isset( $_POST['ftg_delay'] ) ? absint( $_POST['ftg_delay'] ) : '' ),
-                    'script'                              => $script,
-                    'support'                             => $this->checkboxVal( 'ftg_support' ),
-                    'supportText'                         => ( isset( $_POST['ftg_supportText'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_supportText'] ) ) : '' ),
-                    'scrollEffect'                        => $scrollEffect,
-                    'loadedScaleY'                        => ( isset( $_POST['ftg_loadedScaleY'] ) ? absint( $_POST['ftg_loadedScaleY'] ) : '' ),
-                    'loadedScaleX'                        => ( isset( $_POST['ftg_loadedScaleX'] ) ? absint( $_POST['ftg_loadedScaleX'] ) : '' ),
-                    'loadedHSlide'                        => $loadedHSlide,
-                    'loadedVSlide'                        => $loadedVSlide,
-                    'loadedEasing'                        => ( isset( $_POST['ftg_loadedEasing'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_loadedEasing'] ) ) : '' ),
-                    'loadedDuration'                      => ( isset( $_POST['ftg_loadedDuration'] ) ? absint( $_POST['ftg_loadedDuration'] ) : '' ),
-                    'loadedRotateY'                       => ( isset( $_POST['ftg_loadedRotateY'] ) ? intval( wp_unslash( $_POST['ftg_loadedRotateY'] ) ) : '' ),
-                    'loadedRotateX'                       => ( isset( $_POST['ftg_loadedRotateX'] ) ? intval( wp_unslash( $_POST['ftg_loadedRotateX'] ) ) : '' ),
-                );
-                header( 'Content-type: application/json' );
-                if ( $id > 0 ) {
-                    $result = $this->FinalTilesdb->editGallery( $id, $data );
-                } else {
-                    $result = $this->FinalTilesdb->addGallery( $data );
-                    $id = $this->FinalTilesdb->getNewGalleryId();
-                }
-                if ( $result ) {
-                    echo '{"success":true,"id":' . absint( $id ) . '}';
-                } else {
-                    echo '{"success":false}';
-                }
+            check_admin_referer( 'FinalTiles_gallery', 'FinalTiles_gallery' );
+            $id = ( isset( $_POST['ftg_gallery_edit'] ) ? absint( $_POST['ftg_gallery_edit'] ) : 0 );
+            if ( $id > 0 && !current_user_can( 'edit_others_posts' ) && !$this->FinalTilesdb->canUserEdit( $id ) ) {
+                // Update gallery
+                wp_die( 'Forbidden', 403 );
+            } elseif ( !current_user_can( 'edit_posts' ) ) {
+                // Create gallery
+                wp_die( 'Forbidden', 403 );
+            }
+            $galleryName = ( isset( $_POST['ftg_name'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_name'] ) ) : '' );
+            $galleryDescription = ( isset( $_POST['ftg_description'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_description'] ) ) : '' );
+            $slug = strtolower( str_replace( ' ', '', $galleryName ) );
+            $margin = ( isset( $_POST['ftg_margin'] ) ? absint( $_POST['ftg_margin'] ) : '' );
+            $minTileWidth = ( isset( $_POST['ftg_minTileWidth'] ) ? absint( $_POST['ftg_minTileWidth'] ) : '' );
+            $gridCellSize = ( isset( $_POST['ftg_gridCellSize'] ) ? absint( $_POST['ftg_gridCellSize'] ) : '' );
+            $imagesOrder = ( isset( $_POST['ftg_imagesOrder'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_imagesOrder'] ) ) : '' );
+            $width = ( isset( $_POST['ftg_width'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_width'] ) ) : '' );
+            $enableTwitter = $this->checkboxVal( 'ftg_enableTwitter' );
+            $filterClick = $this->checkboxVal( 'ftg_filterClick' );
+            $enableFacebook = $this->checkboxVal( 'ftg_enableFacebook' );
+            $enablePinterest = $this->checkboxVal( 'ftg_enablePinterest' );
+            $lightbox = ( isset( $_POST['ftg_lightbox'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightbox'] ) ) : '' );
+            $mobileLightbox = ( isset( $_POST['ftg_mobileLightbox'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_mobileLightbox'] ) ) : '' );
+            $blank = $this->checkboxVal( 'ftg_blank' );
+            $filters = ( isset( $_POST['ftg_filters'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_filters'] ) ) : '' );
+            $scrollEffect = ( isset( $_POST['ftg_scrollEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_scrollEffect'] ) ) : '' );
+            $captionBehavior = ( isset( $_POST['ftg_captionBehavior'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionBehavior'] ) ) : '' );
+            $captionMobileBehavior = ( isset( $_POST['ftg_captionMobileBehavior'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionMobileBehavior'] ) ) : '' );
+            $captionEffect = ( isset( $_POST['ftg_captionEffect'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEffect'] ) ) : '' );
+            $captionColor = ( isset( $_POST['ftg_captionColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionColor'] ) ) : '' );
+            $captionBackgroundColor = ( isset( $_POST['ftg_captionBackgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionBackgroundColor'] ) ) : '' );
+            $captionEasing = ( isset( $_POST['ftg_captionEasing'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEasing'] ) ) : '' );
+            $captionHorizontalAlignment = ( isset( $_POST['ftg_captionHorizontalAlignment'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionHorizontalAlignment'] ) ) : '' );
+            $captionVerticalAlignment = ( isset( $_POST['ftg_captionVerticalAlignment'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionVerticalAlignment'] ) ) : '' );
+            $captionEmpty = ( isset( $_POST['ftg_captionEmpty'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionEmpty'] ) ) : '' );
+            $captionOpacity = ( isset( $_POST['ftg_captionOpacity'] ) ? absint( $_POST['ftg_captionOpacity'] ) : '' );
+            $borderSize = ( isset( $_POST['ftg_borderSize'] ) ? absint( $_POST['ftg_borderSize'] ) : '' );
+            $borderColor = ( isset( $_POST['ftg_borderColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_borderColor'] ) ) : '' );
+            $titleFontSize = ( isset( $_POST['ftg_titleFontSize'] ) ? absint( $_POST['ftg_titleFontSize'] ) : '' );
+            $loadingBarColor = ( isset( $_POST['ftg_loadingBarColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_loadingBarColor'] ) ) : '' );
+            $loadingBarBackgroundColor = ( isset( $_POST['ftg_loadingBarBackgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_loadingBarBackgroundColor'] ) ) : '' );
+            $borderRadius = ( isset( $_POST['ftg_borderRadius'] ) ? absint( $_POST['ftg_borderRadius'] ) : '' );
+            $allFilterLabel = ( isset( $_POST['ftg_allFilterLabel'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_allFilterLabel'] ) ) : '' );
+            $shadowColor = ( isset( $_POST['ftg_shadowColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_shadowColor'] ) ) : '' );
+            $shadowSize = ( isset( $_POST['ftg_shadowSize'] ) ? absint( $_POST['ftg_shadowSize'] ) : '' );
+            $enlargeImages = $this->checkboxVal( 'ftg_enlargeImages' );
+            $wp_field_caption = ( isset( $_POST['ftg_wp_field_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_caption'] ) ) : '' );
+            $wp_field_title = ( isset( $_POST['ftg_wp_field_title'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_title'] ) ) : '' );
+            $style = ( isset( $_POST['ftg_style'] ) ? sanitize_textarea_field( wp_unslash( $_POST['ftg_style'] ) ) : '' );
+            $loadedHSlide = ( isset( $_POST['ftg_loadedHSlide'] ) ? intval( wp_unslash( $_POST['ftg_loadedHSlide'] ) ) : '' );
+            $loadedVSlide = ( isset( $_POST['ftg_loadedVSlide'] ) ? intval( wp_unslash( $_POST['ftg_loadedVSlide'] ) ) : '' );
+            if ( current_user_can( 'unfiltered_html' ) ) {
+                $script = ( isset( $_POST['ftg_script'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_script'] ) ) : '' );
+            } else {
+                $script = '';
+            }
+            $captionEffectDuration = ( isset( $_POST['ftg_captionEffectDuration'] ) ? absint( $_POST['ftg_captionEffectDuration'] ) : 250 );
+            $data = array(
+                'ajaxLoading'                         => ( isset( $_POST['ftg_ajaxLoading'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_ajaxLoading'] ) ) : '' ),
+                'layout'                              => ( isset( $_POST['ftg_layout'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_layout'] ) ) : '' ),
+                'name'                                => $galleryName,
+                'slug'                                => $slug,
+                'description'                         => $galleryDescription,
+                'author_id'                           => ( isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() ),
+                'lightbox'                            => $lightbox,
+                'lightboxOptions'                     => ( isset( $_POST['ftg_lightboxOptions'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxOptions'] ) ) : '' ),
+                'lightboxOptionsMobile'               => ( isset( $_POST['lightboxOptionsMobile'] ) ? sanitize_text_field( wp_unslash( $_POST['lightboxOptionsMobile'] ) ) : '' ),
+                'mobileLightbox'                      => $mobileLightbox,
+                'lightboxImageSize'                   => ( isset( $_POST['ftg_lightboxImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxImageSize'] ) ) : '' ),
+                'blank'                               => $blank,
+                'margin'                              => $margin,
+                'allFilterLabel'                      => $allFilterLabel,
+                'minTileWidth'                        => $minTileWidth,
+                'gridCellSize'                        => $gridCellSize,
+                'gridCellSizeDisabledBelow'           => ( isset( $_POST['ftg_gridCellSizeDisabledBelow'] ) ? absint( $_POST['ftg_gridCellSizeDisabledBelow'] ) : '' ),
+                'enableTwitter'                       => $enableTwitter,
+                'backgroundColor'                     => ( isset( $_POST['ftg_backgroundColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_backgroundColor'] ) ) : '' ),
+                'filterClick'                         => $filterClick,
+                'disableLightboxGroups'               => $this->checkboxVal( 'ftg_disableLightboxGroups' ),
+                'defaultFilter'                       => ( isset( $_POST['ftg_filterDef'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_filterDef'] ) ) : '' ),
+                'enableFacebook'                      => $enableFacebook,
+                'enablePinterest'                     => $enablePinterest,
+                'imagesOrder'                         => $imagesOrder,
+                'compressHTML'                        => $this->checkboxVal( 'ftg_compressHTML' ),
+                'loadMethod'                          => ( isset( $_POST['ftg_loadMethod'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_loadMethod'] ) ) : '' ),
+                'socialIconColor'                     => ( isset( $_POST['ftg_socialIconColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_socialIconColor'] ) ) : '' ),
+                'socialIconPosition'                  => ( isset( $_POST['ftg_socialIconPosition'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_socialIconPosition'] ) ) : '' ),
+                'socialIconStyle'                     => ( isset( $_POST['ftg_socialIconStyle'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_socialIconStyle'] ) ) : '' ),
+                'recentPostsCaption'                  => ( isset( $_POST['ftg_recentPostsCaption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_recentPostsCaption'] ) ) : '' ),
+                'recentPostsCaptionAutoExcerptLength' => ( isset( $_POST['ftg_recentPostsCaptionAutoExcerptLength'] ) ? intval( wp_unslash( $_POST['ftg_recentPostsCaptionAutoExcerptLength'] ) ) : '' ),
+                'captionBehavior'                     => $captionBehavior,
+                'captionEffect'                       => $captionEffect,
+                'captionEmpty'                        => $captionEmpty,
+                'captionBackgroundColor'              => $captionBackgroundColor,
+                'captionColor'                        => $captionColor,
+                'captionCustomFields'                 => ( isset( $_POST['ftg_captionCustomFields'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_captionCustomFields'] ) ) : '' ),
+                'captionFrameColor'                   => ( isset( $_POST['ftg_captionFrameColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionFrameColor'] ) ) : '' ),
+                'captionEffectDuration'               => $captionEffectDuration,
+                'captionEasing'                       => $captionEasing,
+                'captionVerticalAlignment'            => $captionVerticalAlignment,
+                'captionHorizontalAlignment'          => $captionHorizontalAlignment,
+                'captionMobileBehavior'               => $captionMobileBehavior,
+                'captionOpacity'                      => $captionOpacity,
+                'captionIcon'                         => ( isset( $_POST['ftg_captionIcon'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionIcon'] ) ) : '' ),
+                'captionFrame'                        => $this->checkboxVal( 'ftg_captionFrame' ),
+                'customCaptionIcon'                   => ( isset( $_POST['ftg_customCaptionIcon'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_customCaptionIcon'] ) ) : '' ),
+                'captionIconColor'                    => ( isset( $_POST['ftg_captionIconColor'] ) ? sanitize_hex_color( wp_unslash( $_POST['ftg_captionIconColor'] ) ) : '' ),
+                'captionIconSize'                     => ( isset( $_POST['ftg_captionIconSize'] ) ? absint( $_POST['ftg_captionIconSize'] ) : '' ),
+                'captionFontSize'                     => ( isset( $_POST['ftg_captionFontSize'] ) ? absint( $_POST['ftg_captionFontSize'] ) : '' ),
+                'captionPosition'                     => ( isset( $_POST['ftg_captionPosition'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_captionPosition'] ) ) : '' ),
+                'titleFontSize'                       => ( isset( $_POST['ftg_titleFontSize'] ) ? absint( $_POST['ftg_titleFontSize'] ) : '' ),
+                'hoverZoom'                           => ( isset( $_POST['ftg_hoverZoom'] ) ? absint( $_POST['ftg_hoverZoom'] ) : '' ),
+                'hoverRotation'                       => ( isset( $_POST['ftg_hoverRotation'] ) ? intval( wp_unslash( $_POST['ftg_hoverRotation'] ) ) : '' ),
+                'hoverDuration'                       => ( isset( $_POST['ftg_hoverDuration'] ) ? intval( wp_unslash( $_POST['ftg_hoverDuration'] ) ) : '' ),
+                'hoverIconRotation'                   => $this->checkboxVal( 'ftg_hoverIconRotation' ),
+                'filters'                             => $filters,
+                'wp_field_caption'                    => $wp_field_caption,
+                'wp_field_title'                      => $wp_field_title,
+                'borderSize'                          => $borderSize,
+                'borderColor'                         => $borderColor,
+                'loadingBarColor'                     => $loadingBarColor,
+                'loadingBarBackgroundColor'           => $loadingBarBackgroundColor,
+                'enlargeImages'                       => $enlargeImages,
+                'borderRadius'                        => $borderRadius,
+                'imageSizeFactor'                     => ( isset( $_POST['ftg_imageSizeFactor'] ) ? absint( $_POST['ftg_imageSizeFactor'] ) : '' ),
+                'imageSizeFactorTabletLandscape'      => ( isset( $_POST['ftg_imageSizeFactorTabletLandscape'] ) ? absint( $_POST['ftg_imageSizeFactorTabletLandscape'] ) : '' ),
+                'imageSizeFactorTabletPortrait'       => ( isset( $_POST['ftg_imageSizeFactorTabletPortrait'] ) ? absint( $_POST['ftg_imageSizeFactorTabletPortrait'] ) : '' ),
+                'imageSizeFactorPhoneLandscape'       => ( isset( $_POST['ftg_imageSizeFactorPhoneLandscape'] ) ? absint( $_POST['ftg_imageSizeFactorPhoneLandscape'] ) : '' ),
+                'imageSizeFactorPhonePortrait'        => ( isset( $_POST['ftg_imageSizeFactorPhonePortrait'] ) ? absint( $_POST['ftg_imageSizeFactorPhonePortrait'] ) : '' ),
+                'imageSizeFactorCustom'               => ( isset( $_POST['ftg_imageSizeFactorCustom'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_imageSizeFactorCustom'] ) ) : '' ),
+                'taxonomyAsFilter'                    => ( isset( $_POST['ftg_taxonomyAsFilter'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_taxonomyAsFilter'] ) ) : '' ),
+                'columns'                             => ( isset( $_POST['ftg_columns'] ) ? intval( wp_unslash( $_POST['ftg_columns'] ) ) : '' ),
+                'columnsTabletLandscape'              => ( isset( $_POST['ftg_columnsTabletLandscape'] ) ? absint( $_POST['ftg_columnsTabletLandscape'] ) : '' ),
+                'columnsTabletPortrait'               => ( isset( $_POST['ftg_columnsTabletPortrait'] ) ? absint( $_POST['ftg_columnsTabletPortrait'] ) : '' ),
+                'columnsPhoneLandscape'               => ( isset( $_POST['ftg_columnsPhoneLandscape'] ) ? absint( $_POST['ftg_columnsPhoneLandscape'] ) : '' ),
+                'columnsPhonePortrait'                => ( isset( $_POST['ftg_columnsPhonePortrait'] ) ? absint( $_POST['ftg_columnsPhonePortrait'] ) : '' ),
+                'max_posts'                           => ( isset( $_POST['ftg_max_posts'] ) ? absint( $_POST['ftg_max_posts'] ) : '' ),
+                'shadowSize'                          => $shadowSize,
+                'shadowColor'                         => $shadowColor,
+                'source'                              => ( isset( $_POST['ftg_source'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_source'] ) ) : '' ),
+                'post_types'                          => ( isset( $_POST['ftg_post_types'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_types'] ) ) : '' ),
+                'post_taxonomies'                     => ( isset( $_POST['ftg_post_taxonomies'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_taxonomies'] ) ) : '' ),
+                'taxonomyOperator'                    => ( isset( $_POST['ftg_taxonomyOperator'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_taxonomyOperator'] ) ) : '' ),
+                'post_tags'                           => ( isset( $_POST['ftg_post_tags'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_post_tags'] ) ) : '' ),
+                'tilesPerPage'                        => ( isset( $_POST['ftg_tilesPerPage'] ) ? absint( $_POST['ftg_tilesPerPage'] ) : '' ),
+                'woo_categories'                      => ( isset( $_POST['ftg_woo_categories'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_woo_categories'] ) ) : '' ),
+                'defaultPostImageSize'                => ( isset( $_POST['ftg_defaultPostImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_defaultPostImageSize'] ) ) : '' ),
+                'defaultWooImageSize'                 => ( isset( $_POST['ftg_defaultWooImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_defaultWooImageSize'] ) ) : '' ),
+                'width'                               => $width,
+                'beforeGalleryText'                   => ( isset( $_POST['ftg_beforeGalleryText'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_beforeGalleryText'] ) ) : '' ),
+                'afterGalleryText'                    => ( isset( $_POST['ftg_afterGalleryText'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_afterGalleryText'] ) ) : '' ),
+                'aClass'                              => ( isset( $_POST['ftg_aClass'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_aClass'] ) ) : '' ),
+                'rel'                                 => ( isset( $_POST['ftg_rel'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_rel'] ) ) : '' ),
+                'style'                               => $style,
+                'delay'                               => ( isset( $_POST['ftg_delay'] ) ? absint( $_POST['ftg_delay'] ) : '' ),
+                'script'                              => $script,
+                'support'                             => $this->checkboxVal( 'ftg_support' ),
+                'supportText'                         => ( isset( $_POST['ftg_supportText'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_supportText'] ) ) : '' ),
+                'scrollEffect'                        => $scrollEffect,
+                'loadedScaleY'                        => ( isset( $_POST['ftg_loadedScaleY'] ) ? absint( $_POST['ftg_loadedScaleY'] ) : '' ),
+                'loadedScaleX'                        => ( isset( $_POST['ftg_loadedScaleX'] ) ? absint( $_POST['ftg_loadedScaleX'] ) : '' ),
+                'loadedHSlide'                        => $loadedHSlide,
+                'loadedVSlide'                        => $loadedVSlide,
+                'loadedEasing'                        => ( isset( $_POST['ftg_loadedEasing'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_loadedEasing'] ) ) : '' ),
+                'loadedDuration'                      => ( isset( $_POST['ftg_loadedDuration'] ) ? absint( $_POST['ftg_loadedDuration'] ) : '' ),
+                'loadedRotateY'                       => ( isset( $_POST['ftg_loadedRotateY'] ) ? intval( wp_unslash( $_POST['ftg_loadedRotateY'] ) ) : '' ),
+                'loadedRotateX'                       => ( isset( $_POST['ftg_loadedRotateX'] ) ? intval( wp_unslash( $_POST['ftg_loadedRotateX'] ) ) : '' ),
+            );
+            header( 'Content-type: application/json' );
+            if ( $id > 0 ) {
+                $result = $this->FinalTilesdb->editGallery( $id, $data );
+            } else {
+                $result = $this->FinalTilesdb->addGallery( $data );
+                $id = $this->FinalTilesdb->getNewGalleryId();
+            }
+            if ( $result ) {
+                echo '{"success":true,"id":' . absint( $id ) . '}';
+            } else {
+                echo '{"success":false}';
             }
             wp_die();
         }
@@ -1389,6 +1475,32 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
 
         public function setupFields() {
             include 'admin/include/fields.php';
+        }
+
+        public function getUsers() {
+            $users = get_users();
+            $result = array();
+            foreach ( $users as $user ) {
+                if ( user_can( $user->ID, 'edit_posts' ) ) {
+                    $label = $user->display_name . ' (' . $user->user_email . ')';
+                    $result[] = array(
+                        'id'    => $user->ID,
+                        'label' => $label,
+                    );
+                }
+            }
+            return $result;
+        }
+
+        public function getSuperAdminId() {
+            $admins = get_users( array(
+                'role'   => 'administrator',
+                'number' => 1,
+            ) );
+            if ( !empty( $admins ) ) {
+                return $admins[0]->ID;
+            }
+            return 0;
         }
 
     }

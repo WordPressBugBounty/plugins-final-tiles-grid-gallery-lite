@@ -75,6 +75,7 @@ function ftgSortByName(  $a, $b  ) {
     return ( $a['name'] < $b['name'] ? -1 : 1 );
 }
 
+$current_user = ( isset( $gallery->author_id ) ? absint( $gallery->author_id ) : $this->getSuperAdminId() );
 ?>
 
 <div class="row">
@@ -838,8 +839,26 @@ echo esc_attr( $gid );
 ?>']" style="max-width:200px;display:inline-block;">
 						<a href="#" title="Click to copy shortcode" class="copy-ftg-shortcode button button-primary dashicons dashicons-format-gallery" style="width:40px; display: inline-block;"></a><span style="margin-left:15px;"></span>
 					</div>
+					<?php 
+if ( current_user_can( 'manage_options' ) ) {
+    ?>
+					<p><?php 
+    esc_html_e( 'Gallery author', 'final-tiles-grid-gallery-lite' );
+    ?></p>
+					<div class="form-fields">
+						<select id="ftg_gallery_author" name="ftg_gallery_author" style="margin-bottom:10px;display:inline-block;max-width: 245px;">
+								<?php 
+    foreach ( $this->getUsers() as $users => $user ) {
+        echo '<option ' . (( absint( $user['id'] ) === $current_user ? 'selected' : '' )) . ' value="' . esc_attr( $user['id'] ) . '">' . esc_html( $user['label'] ) . '</option>';
+    }
+    ?>
+						</select>
+					</div>
+					<?php 
+}
+?>
 					<div>
-								<button data-update-gallery class="button components-button is-primary"><?php 
+						<button data-update-gallery class="button components-button is-primary"><?php 
 esc_html_e( 'Save gallery', 'final-tiles-grid-gallery-lite' );
 ?></button>
 					</div>

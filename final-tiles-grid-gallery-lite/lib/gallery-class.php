@@ -123,7 +123,7 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "\tjQuery('#ftg-" . absint( $this->id . $rid ) . "').finalTilesGallery({\n";
             $javascript .= "\t\tminTileWidth: " . esc_attr( $gallery->minTileWidth ) . ",\n";
             if ( strlen( $gallery->script ) ) {
-                $javascript .= "\t\tonComplete: function () { " . stripslashes( strip_tags( $gallery->script ) ) . "},\n";
+                $javascript .= "\t\tonComplete: function () { " . esc_js( $gallery->script ) . "},\n";
             }
             $javascript .= "\t\tmargin: " . esc_attr( $gallery->margin ) . ",\n";
             $jsLoadMethod = $gallery->loadMethod;
