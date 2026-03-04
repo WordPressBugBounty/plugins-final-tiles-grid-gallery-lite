@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.11
+ * Version:                  3.6.12
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             6.9
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.11' );
+define( 'FTGVERSION', '3.6.12' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -39,22 +39,23 @@ if ( !function_exists( 'ftg_fs' ) ) {
             // Include Freemius SDK.
             require_once __DIR__ . '/freemius/start.php';
             $ftg_fs = fs_dynamic_init( array(
-                'id'              => '1002',
-                'slug'            => 'final-tiles-grid-gallery-lite',
-                'type'            => 'plugin',
-                'public_key'      => 'pk_d0e075b84d491d510a1d0a21087af',
-                'is_premium'      => false,
-                'has_addons'      => false,
-                'has_paid_plans'  => true,
-                'trial'           => array(
+                'id'               => '1002',
+                'slug'             => 'final-tiles-grid-gallery-lite',
+                'type'             => 'plugin',
+                'public_key'       => 'pk_d0e075b84d491d510a1d0a21087af',
+                'is_premium'       => false,
+                'has_addons'       => false,
+                'has_paid_plans'   => true,
+                'trial'            => array(
                     'days'               => 14,
                     'is_require_payment' => true,
                 ),
-                'has_affiliation' => 'all',
-                'menu'            => array(
+                'has_affiliation'  => 'all',
+                'menu'             => array(
                     'slug' => 'ftg-lite-gallery-admin',
                 ),
-                'is_live'         => true,
+                'is_live'          => true,
+                'is_org_compliant' => true,
             ) );
         }
         return $ftg_fs;
@@ -491,6 +492,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
         }
 
         public function ftg_shortcode_editor() {
+            check_ajax_referer( 'ftg_shortcode_editor_nonce', 'nonce' );
             if ( !current_user_can( 'edit_posts' ) ) {
                 wp_die( 'Unauthorized', 401 );
             }
@@ -1538,6 +1540,9 @@ if ( !function_exists( 'ftg_admin_script' ) ) {
     function ftg_admin_script() {
         wp_register_script( 'admin-generic-ftg', plugins_url( 'admin/scripts/admin.js', __FILE__ ), array('jquery') );
         wp_enqueue_script( 'admin-generic-ftg' );
+        wp_localize_script( 'admin-generic-ftg', 'ftgEditorData', array(
+            'nonce' => wp_create_nonce( 'ftg_shortcode_editor_nonce' ),
+        ) );
     }
 
     add_action( 'admin_enqueue_scripts', 'ftg_admin_script' );

@@ -6,7 +6,7 @@
 			{
 				ed.windowManager.open(
 				{
-					file: ajaxurl + '?action=ftg_shortcode_editor',
+					file: ajaxurl + '?action=ftg_shortcode_editor&nonce=' + (typeof ftgEditorData !== 'undefined' ? ftgEditorData.nonce : ''),
 					width : 900 + parseInt(ed.getLang('button.delta_width', 0)),
 					height : 500 + parseInt(ed.getLang('button.delta_height', 0)),
 					inline : 1
