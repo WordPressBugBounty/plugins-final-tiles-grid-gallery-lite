@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.12
+ * Version:                  3.6.13
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             6.9
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.12' );
+define( 'FTGVERSION', '3.6.13' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.

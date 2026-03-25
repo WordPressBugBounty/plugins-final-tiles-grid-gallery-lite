@@ -232,7 +232,7 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             }
             $javascript .= "\n";
             $javascript .= "\t});\n";
-            $javascript .= "\t}, " . esc_attr( $gallery->delay ) . ");\n";
+            $javascript .= "\t}, " . absint( $gallery->delay ) . ");\n";
             $javascript .= "\t});\n";
             $javascript .= "</script>";
             echo $javascript;
