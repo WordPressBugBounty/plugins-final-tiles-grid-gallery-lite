@@ -3,10 +3,10 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.13
+ * Version:                  3.6.14
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
- * Tested up to:             6.9
+ * Tested up to:             7.1
  * Requires:                 5.2 or higher
  * License:                  GPLv3 or later
  * License URI:              http://www.gnu.org/licenses/gpl-3.0.html
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.13' );
+define( 'FTGVERSION', '3.6.14' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -564,6 +564,10 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 if ( json_last_error() !== JSON_ERROR_NONE ) {
                     wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
                 }
+                if ( is_object( $decoded ) && isset( $decoded->script ) && !current_user_can( 'unfiltered_html' ) ) {
+                    $decoded->script = '';
+                    $config = wp_json_encode( $decoded );
+                }
             }
             $this->FinalTilesdb->update_config( $id, $config );
             exit;
@@ -599,6 +603,9 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 wp_die( 'Forbidden', 403 );
             }
             $sourceId = ( isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0 );
+            if ( !$this->FinalTilesdb->canUserEdit( $sourceId ) ) {
+                wp_die( 'Forbidden', 403 );
+            }
             $g = $this->FinalTilesdb->getGalleryById( $sourceId, true );
             $g['name'] .= ' (copy)';
             $this->FinalTilesdb->addGallery( $g );
@@ -852,10 +859,17 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             $filters = ( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '' );
             if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
                 foreach ( explode( ',', $ids ) as $id ) {
+                    if ( !current_user_can( 'edit_post', absint( $id ) ) ) {
+                        continue;
+                    }
                     update_post_meta( absint( $id ), 'ftg_filters', sanitize_text_field( $filters ) );
                 }
             } else {
                 foreach ( explode( ',', $ids ) as $id ) {
+                    $image = $this->FinalTilesdb->getImage( absint( $id ) );
+                    if ( !$image || !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                        continue;
+                    }
                     $result = $this->FinalTilesdb->editImage( absint( $id ), array(
                         'filters' => sanitize_text_field( $filters ),
                     ) );
@@ -872,7 +886,10 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             }
             $ids = ( isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : 0 );
             foreach ( explode( ',', $ids ) as $id ) {
-                $image = $this->FinalTilesdb->getImage( $id );
+                $image = $this->FinalTilesdb->getImage( absint( $id ) );
+                if ( !$image || !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                    continue;
+                }
                 $this->FinalTilesdb->editImage( absint( $id ), array(
                     'hidden' => ( $image->hidden == 'T' ? 'F' : 'T' ),
                 ) );
@@ -890,10 +907,17 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             $group = ( isset( $_POST['group'] ) ? sanitize_text_field( wp_unslash( $_POST['group'] ) ) : '' );
             if ( isset( $_POST['source'] ) && $_POST['source'] == 'posts' ) {
                 foreach ( explode( ',', $ids ) as $id ) {
+                    if ( !current_user_can( 'edit_post', absint( $id ) ) ) {
+                        continue;
+                    }
                     update_post_meta( intval( $id ), 'ftg_group', sanitize_text_field( $group ) );
                 }
             } else {
                 foreach ( explode( ',', $ids ) as $id ) {
+                    $image = $this->FinalTilesdb->getImage( absint( $id ) );
+                    if ( !$image || !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                        continue;
+                    }
                     $result = $this->FinalTilesdb->editImage( $id, array(
                         'group' => sanitize_text_field( $group ),
                     ) );
@@ -942,6 +966,12 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 wp_die( 'Forbidden', 403 );
             }
             $ids = ( isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : 0 );
+            foreach ( explode( ',', $ids ) as $sid ) {
+                $image = $this->FinalTilesdb->getImage( absint( $sid ) );
+                if ( !$image || !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                    wp_die( 'Forbidden', 403 );
+                }
+            }
             $result = $this->FinalTilesdb->sortImages( explode( ',', $ids ) );
             header( 'Content-type: application/json' );
             if ( $result === false ) {
@@ -983,6 +1013,9 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             if ( isset( $_POST['source'] ) && $_POST['source'] === 'posts' ) {
                 $result = true;
                 $postId = ( isset( $_POST['post_id'] ) ? intval( $_POST['post_id'] ) : 0 );
+                if ( !current_user_can( 'edit_post', $postId ) ) {
+                    wp_die( 'Forbidden', 403 );
+                }
                 $img_url = ( isset( $_POST['img_url'] ) ? esc_url_raw( $_POST['img_url'] ) : '' );
                 update_post_meta( $postId, 'ftg_image_url', esc_url_raw( $img_url ) );
                 if ( array_key_exists( 'filters', $_POST ) && strlen( sanitize_text_field( wp_unslash( $_POST['filters'] ) ) ) ) {

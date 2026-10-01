@@ -160,6 +160,10 @@ if(! class_exists('FinalTilesDB'))
 			foreach($galleryResults as $gallery)
 			{
 				$data = json_decode($gallery->configuration);
+				if (!is_object($data))
+					$data = new stdClass();
+				if (!isset($data->name))
+					$data->name = '';
 				$data->Id = $gallery->Id;
 				$result[] = $data;
 			}

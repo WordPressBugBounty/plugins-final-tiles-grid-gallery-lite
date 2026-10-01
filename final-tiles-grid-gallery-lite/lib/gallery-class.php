@@ -29,8 +29,22 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             if ( !$this->loaded ) {
                 return;
             }
+            $ftg_blocked_overrides = array(
+                'script',
+                'beforeGalleryText',
+                'afterGalleryText',
+                'style',
+                'lightboxOptions',
+                'lightboxOptionsMobile',
+                'author_id',
+                'source',
+                'configuration'
+            );
             foreach ( $attrs as $k => $v ) {
                 $prop = FinalTilesGalleryUtils::shortcodeToFieldName( $k );
+                if ( in_array( $prop, $ftg_blocked_overrides, true ) ) {
+                    continue;
+                }
                 if ( isset( $this->gallery->{$prop} ) ) {
                     $this->gallery->{$prop} = $v;
                 }
@@ -121,11 +135,11 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "jQuery(document).ready(function () {\n";
             $javascript .= "setTimeout(function () {\n";
             $javascript .= "\tjQuery('#ftg-" . absint( $this->id . $rid ) . "').finalTilesGallery({\n";
-            $javascript .= "\t\tminTileWidth: " . esc_attr( $gallery->minTileWidth ) . ",\n";
+            $javascript .= "\t\tminTileWidth: " . absint( $gallery->minTileWidth ) . ",\n";
             if ( strlen( $gallery->script ) ) {
                 $javascript .= "\t\tonComplete: function () { " . esc_js( $gallery->script ) . "},\n";
             }
-            $javascript .= "\t\tmargin: " . esc_attr( $gallery->margin ) . ",\n";
+            $javascript .= "\t\tmargin: " . absint( $gallery->margin ) . ",\n";
             $jsLoadMethod = $gallery->loadMethod;
             if ( $gallery->loadMethod == 'trueLazy' ) {
                 $jsLoadMethod = 'lazy';
@@ -133,18 +147,18 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "\t\tloadMethod: '" . esc_attr( $jsLoadMethod ) . "',\n";
             if ( $gallery->ajaxLoading == 'T' ) {
                 $javascript .= "\t\tautoLoadURL: '" . admin_url( 'admin-ajax.php' ) . "',\n";
-                $javascript .= "\t\tpageSize: " . esc_attr( $gallery->tilesPerPage ) . ",\n";
+                $javascript .= "\t\tpageSize: " . absint( $gallery->tilesPerPage ) . ",\n";
             }
             $javascript .= "\t\tnonce: '" . wp_create_nonce( 'finaltilesgallery' ) . "',\n";
             $javascript .= "\t\tgalleryId: '" . absint( $this->id ) . "',\n";
             $javascript .= "\t\tsetupFilters: " . (( $gallery->filterClick == 'F' ? "true" : "false" )) . ",\n";
             $javascript .= "\t\tlayout: '" . esc_attr( $gallery->layout ) . "',\n";
             $javascript .= "\t\tdebug: " . (( empty( $_GET['debug'] ) ? "false" : "true" )) . ",\n";
-            $javascript .= "\t\tgridSize: " . esc_attr( $gallery->gridCellSize ) . ",\n";
-            $javascript .= "\t\tdisableGridSizeBelow:" . esc_attr( $gallery->gridCellSizeDisabledBelow ) . ",\n";
+            $javascript .= "\t\tgridSize: " . absint( $gallery->gridCellSize ) . ",\n";
+            $javascript .= "\t\tdisableGridSizeBelow:" . absint( $gallery->gridCellSizeDisabledBelow ) . ",\n";
             $javascript .= "\t\tallowEnlargement: " . (( $gallery->enlargeImages == "T" ? "true" : "false" )) . ",\n";
             if ( $gallery->layout == "columns" ) {
-                $javascript .= "\t\tcolumns: [\n" . "\t\t\t[4000, " . esc_attr( $gallery->columns ) . "],\n" . "\t\t\t[1024, " . esc_attr( $gallery->columnsTabletLandscape ) . "],\n" . "\t\t\t[800, " . esc_attr( $gallery->columnsTabletPortrait ) . "],\n" . "\t\t\t[480, " . esc_attr( $gallery->columnsPhoneLandscape ) . "],\n" . "\t\t\t[320, " . esc_attr( $gallery->columnsPhonePortrait ) . "]\n" . "\t\t],";
+                $javascript .= "\t\tcolumns: [\n" . "\t\t\t[4000, " . absint( $gallery->columns ) . "],\n" . "\t\t\t[1024, " . absint( $gallery->columnsTabletLandscape ) . "],\n" . "\t\t\t[800, " . absint( $gallery->columnsTabletPortrait ) . "],\n" . "\t\t\t[480, " . absint( $gallery->columnsPhoneLandscape ) . "],\n" . "\t\t\t[320, " . absint( $gallery->columnsPhonePortrait ) . "]\n" . "\t\t],";
             } else {
                 $javascript .= "\t\timageSizeFactor: [\n" . "\t\t\t [4000, " . absint( $gallery->imageSizeFactor ) / 100 . "]\n" . "\t\t\t,[1024, " . absint( $gallery->imageSizeFactorTabletLandscape ) / 100 . "]\n" . "\t\t\t,[768, " . absint( $gallery->imageSizeFactorTabletPortrait ) / 100 . "]\n" . "\t\t\t,[640, " . absint( $gallery->imageSizeFactorPhoneLandscape ) / 100 . "]\n" . "\t\t\t,[320, " . absint( $gallery->imageSizeFactorPhonePortrait ) / 100 . "]\n";
                 foreach ( explode( "|", $gallery->imageSizeFactorCustom ) as $isf ) {
