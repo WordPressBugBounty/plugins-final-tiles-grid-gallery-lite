@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.14
+ * Version:                  3.6.15
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             7.1
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.14' );
+define( 'FTGVERSION', '3.6.15' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -564,8 +564,22 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 if ( json_last_error() !== JSON_ERROR_NONE ) {
                     wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
                 }
-                if ( is_object( $decoded ) && isset( $decoded->script ) && !current_user_can( 'unfiltered_html' ) ) {
-                    $decoded->script = '';
+                if ( is_object( $decoded ) && !current_user_can( 'unfiltered_html' ) ) {
+                    // Fields rendered as raw JavaScript: cannot be escaped, only gated by capability.
+                    foreach ( array('script', 'lightboxOptions', 'lightboxOptionsMobile') as $raw_js_field ) {
+                        if ( isset( $decoded->{$raw_js_field} ) ) {
+                            $decoded->{$raw_js_field} = '';
+                        }
+                    }
+                    // Fields rendered as raw HTML: match save_gallery sanitization.
+                    foreach ( array('beforeGalleryText', 'afterGalleryText', 'captionCustomFields') as $html_field ) {
+                        if ( isset( $decoded->{$html_field} ) ) {
+                            $decoded->{$html_field} = ( is_string( $decoded->{$html_field} ) ? wp_kses_post( $decoded->{$html_field} ) : '' );
+                        }
+                    }
+                    if ( isset( $decoded->style ) ) {
+                        $decoded->style = ( is_string( $decoded->style ) ? sanitize_textarea_field( $decoded->style ) : '' );
+                    }
                     $config = wp_json_encode( $decoded );
                 }
             }
@@ -968,7 +982,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             $ids = ( isset( $_POST['ids'] ) ? sanitize_text_field( wp_unslash( $_POST['ids'] ) ) : 0 );
             foreach ( explode( ',', $ids ) as $sid ) {
                 $image = $this->FinalTilesdb->getImage( absint( $sid ) );
-                if ( !$image || !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
+                if ( $image && !$this->FinalTilesdb->canUserEdit( $image->gid ) ) {
                     wp_die( 'Forbidden', 403 );
                 }
             }

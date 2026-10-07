@@ -127,6 +127,9 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
         public function add_gallery_js() {
             $rid = $this->id;
             $gallery = $this->gallery;
+            // Raw-JS fields (script, lightboxOptions) are emitted only when the gallery author may store unfiltered JS.
+            $ftg_gallery_author = ( isset( $gallery->author_id ) ? absint( $gallery->author_id ) : 0 );
+            $ftg_allow_raw_js = $ftg_gallery_author && user_can( $ftg_gallery_author, 'unfiltered_html' );
             $lightbox = ( wp_is_mobile() ? ( $gallery->mobileLightbox == "desktop" ? $gallery->lightbox : $gallery->mobileLightbox ) : $gallery->lightbox );
             $javascript = "<script type='text/javascript'>\n";
             if ( $lightbox != 'lightgallery' ) {
@@ -136,7 +139,7 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "setTimeout(function () {\n";
             $javascript .= "\tjQuery('#ftg-" . absint( $this->id . $rid ) . "').finalTilesGallery({\n";
             $javascript .= "\t\tminTileWidth: " . absint( $gallery->minTileWidth ) . ",\n";
-            if ( strlen( $gallery->script ) ) {
+            if ( $ftg_allow_raw_js && strlen( $gallery->script ) ) {
                 $javascript .= "\t\tonComplete: function () { " . esc_js( $gallery->script ) . "},\n";
             }
             $javascript .= "\t\tmargin: " . absint( $gallery->margin ) . ",\n";
@@ -144,7 +147,7 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             if ( $gallery->loadMethod == 'trueLazy' ) {
                 $jsLoadMethod = 'lazy';
             }
-            $javascript .= "\t\tloadMethod: '" . esc_attr( $jsLoadMethod ) . "',\n";
+            $javascript .= "\t\tloadMethod: '" . esc_js( $jsLoadMethod ) . "',\n";
             if ( $gallery->ajaxLoading == 'T' ) {
                 $javascript .= "\t\tautoLoadURL: '" . admin_url( 'admin-ajax.php' ) . "',\n";
                 $javascript .= "\t\tpageSize: " . absint( $gallery->tilesPerPage ) . ",\n";
@@ -152,7 +155,7 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "\t\tnonce: '" . wp_create_nonce( 'finaltilesgallery' ) . "',\n";
             $javascript .= "\t\tgalleryId: '" . absint( $this->id ) . "',\n";
             $javascript .= "\t\tsetupFilters: " . (( $gallery->filterClick == 'F' ? "true" : "false" )) . ",\n";
-            $javascript .= "\t\tlayout: '" . esc_attr( $gallery->layout ) . "',\n";
+            $javascript .= "\t\tlayout: '" . esc_js( $gallery->layout ) . "',\n";
             $javascript .= "\t\tdebug: " . (( empty( $_GET['debug'] ) ? "false" : "true" )) . ",\n";
             $javascript .= "\t\tgridSize: " . absint( $gallery->gridCellSize ) . ",\n";
             $javascript .= "\t\tdisableGridSizeBelow:" . absint( $gallery->gridCellSizeDisabledBelow ) . ",\n";
@@ -164,13 +167,13 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
                 foreach ( explode( "|", $gallery->imageSizeFactorCustom ) as $isf ) {
                     $_ = explode( ",", $isf );
                     if ( !empty( $_[0] ) ) {
-                        $javascript .= "\t\t\t,[" . esc_attr( $_[0] ) . ", " . absint( $_[1] ) / 100 . "]\n";
+                        $javascript .= "\t\t\t,[" . absint( $_[0] ) . ", " . absint( $_[1] ) / 100 . "]\n";
                     }
                 }
                 $javascript .= "\t\t],\n";
             }
             if ( isset( $scrollEffect ) ) {
-                $javascript .= "\t\tscrollEffect: '" . esc_attr( $gallery->scrollEffect ) . "',\n";
+                $javascript .= "\t\tscrollEffect: '" . esc_js( $gallery->scrollEffect ) . "',\n";
             }
             $javascript .= "\t\tselectedFilter: '" . $this->slugify( $gallery->defaultFilter ) . "'\n";
             $javascript .= "\t});\n";
@@ -199,6 +202,9 @@ if ( !class_exists( "FinalTilesGallery" ) ) {
             $javascript .= "\t\t});\n";
             $javascript .= "\t})();\n";
             $lightbox_options = ( wp_is_mobile() ? $gallery->lightboxOptionsMobile : $gallery->lightboxOptions );
+            if ( !$ftg_allow_raw_js ) {
+                $lightbox_options = '';
+            }
             switch ( $lightbox ) {
                 case 'magnific':
                     $javascript .= "\t\tjQuery('#ftg-" . absint( $this->id . $rid ) . "').magnificPopup({type:'image', zoom: {\n";
