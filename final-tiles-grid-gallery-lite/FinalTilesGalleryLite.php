@@ -3,7 +3,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.15
+ * Version:                  3.6.16
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             7.1
@@ -25,7 +25,7 @@
  * Original Author:          https://profiles.wordpress.org/greentreealbs/
  *
  */
-define( 'FTGVERSION', '3.6.15' );
+define( 'FTGVERSION', '3.6.16' );
 // Create a helper function for easy SDK access.
 if ( !function_exists( 'ftg_fs' ) ) {
     // Create a helper function for easy SDK access.
@@ -564,23 +564,34 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 if ( json_last_error() !== JSON_ERROR_NONE ) {
                     wp_die( 'Invalid JSON configuration data. Error: ' . json_last_error_msg() );
                 }
-                if ( is_object( $decoded ) && !current_user_can( 'unfiltered_html' ) ) {
-                    // Fields rendered as raw JavaScript: cannot be escaped, only gated by capability.
-                    foreach ( array('script', 'lightboxOptions', 'lightboxOptionsMobile') as $raw_js_field ) {
-                        if ( isset( $decoded->{$raw_js_field} ) ) {
-                            $decoded->{$raw_js_field} = '';
+                if ( is_object( $decoded ) ) {
+                    $config_changed = false;
+                    // Only users who can edit others' content may set the gallery's author.
+                    if ( isset( $decoded->author_id ) && !current_user_can( 'edit_others_posts' ) ) {
+                        $decoded->author_id = get_current_user_id();
+                        $config_changed = true;
+                    }
+                    if ( !current_user_can( 'unfiltered_html' ) ) {
+                        // Fields rendered as raw JavaScript: cannot be escaped, only gated by capability.
+                        foreach ( array('script', 'lightboxOptions', 'lightboxOptionsMobile') as $raw_js_field ) {
+                            if ( isset( $decoded->{$raw_js_field} ) ) {
+                                $decoded->{$raw_js_field} = '';
+                            }
                         }
-                    }
-                    // Fields rendered as raw HTML: match save_gallery sanitization.
-                    foreach ( array('beforeGalleryText', 'afterGalleryText', 'captionCustomFields') as $html_field ) {
-                        if ( isset( $decoded->{$html_field} ) ) {
-                            $decoded->{$html_field} = ( is_string( $decoded->{$html_field} ) ? wp_kses_post( $decoded->{$html_field} ) : '' );
+                        // Fields rendered as raw HTML: match save_gallery sanitization.
+                        foreach ( array('beforeGalleryText', 'afterGalleryText', 'captionCustomFields') as $html_field ) {
+                            if ( isset( $decoded->{$html_field} ) ) {
+                                $decoded->{$html_field} = ( is_string( $decoded->{$html_field} ) ? wp_kses_post( $decoded->{$html_field} ) : '' );
+                            }
                         }
+                        if ( isset( $decoded->style ) ) {
+                            $decoded->style = ( is_string( $decoded->style ) ? sanitize_textarea_field( $decoded->style ) : '' );
+                        }
+                        $config_changed = true;
                     }
-                    if ( isset( $decoded->style ) ) {
-                        $decoded->style = ( is_string( $decoded->style ) ? sanitize_textarea_field( $decoded->style ) : '' );
+                    if ( $config_changed ) {
+                        $config = wp_json_encode( $decoded );
                     }
-                    $config = wp_json_encode( $decoded );
                 }
             }
             $this->FinalTilesdb->update_config( $id, $config );
@@ -1160,7 +1171,7 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
             // phpcs:ignore
             $data["name"] = ( isset( $_POST['ftg_name'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_name'] ) ) : '' );
             // phpcs:ignore
-            $data["author_id"] = ( isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() );
+            $data["author_id"] = ( current_user_can( 'edit_others_posts' ) && isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() );
             $data['description'] = ( isset( $_POST['ftg_description'] ) ? wp_kses_post( wp_unslash( $_POST['ftg_description'] ) ) : '' );
             $data['source'] = ( isset( $_POST['ftg_source'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_source'] ) ) : '' );
             $data['wp_field_caption'] = ( isset( $_POST['ftg_wp_field_caption'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_wp_field_caption'] ) ) : '' );
@@ -1257,10 +1268,10 @@ if ( !class_exists( 'FinalTiles_Gallery' ) ) {
                 'name'                                => $galleryName,
                 'slug'                                => $slug,
                 'description'                         => $galleryDescription,
-                'author_id'                           => ( isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() ),
+                'author_id'                           => ( current_user_can( 'edit_others_posts' ) && isset( $_POST['ftg_gallery_author'] ) ? absint( $_POST['ftg_gallery_author'] ) : get_current_user_id() ),
                 'lightbox'                            => $lightbox,
-                'lightboxOptions'                     => ( isset( $_POST['ftg_lightboxOptions'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxOptions'] ) ) : '' ),
-                'lightboxOptionsMobile'               => ( isset( $_POST['lightboxOptionsMobile'] ) ? sanitize_text_field( wp_unslash( $_POST['lightboxOptionsMobile'] ) ) : '' ),
+                'lightboxOptions'                     => ( current_user_can( 'unfiltered_html' ) && isset( $_POST['ftg_lightboxOptions'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxOptions'] ) ) : '' ),
+                'lightboxOptionsMobile'               => ( current_user_can( 'unfiltered_html' ) && isset( $_POST['lightboxOptionsMobile'] ) ? sanitize_text_field( wp_unslash( $_POST['lightboxOptionsMobile'] ) ) : '' ),
                 'mobileLightbox'                      => $mobileLightbox,
                 'lightboxImageSize'                   => ( isset( $_POST['ftg_lightboxImageSize'] ) ? sanitize_text_field( wp_unslash( $_POST['ftg_lightboxImageSize'] ) ) : '' ),
                 'blank'                               => $blank,

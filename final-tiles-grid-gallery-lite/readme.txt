@@ -3,7 +3,7 @@ Contributors: wpchill, silkalns, freemius
 Tags: gallery, grid gallery, best gallery plugin, free gallery, gallery plugin, gallery grid plugin, masonry, photo gallery, image gallery, social gallery, portfolio gallery, lightbox, justified gallery
 Requires at least: 5.2
 Tested up to: 7.1
-Stable tag: 3.6.15
+Stable tag: 3.6.16
 License: GPLv3 or later
 License URI: http://www.gnu.org/licenses/gpl-3.0.html
 
@@ -128,6 +128,9 @@ Please report security bugs found in the source code of the Image Photo Gallery 
 6. 52 pages documentation
 
 == Changelog ==
+= 3.6.16 - 08.10.2026 =
+- Fixed: Security update (thanks to Ala Bouali)
+
 = 3.6.15 - 07.10.2026 =
 - Fixed: Security update (thanks to Ala Bouali)
 
