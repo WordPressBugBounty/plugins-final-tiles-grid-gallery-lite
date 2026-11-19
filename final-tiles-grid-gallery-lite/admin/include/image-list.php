@@ -104,7 +104,7 @@ if(isset($imageResults))
 				</select>
 				<input type="hidden" name="target" value="<?php echo esc_attr($image->target );?>" />
 				<input type="hidden" name="group" value="<?php echo esc_attr($image->group );?>" />
-				<input type="hidden" name="zoom" value="<?php echo esc_attr($image->zoom );?>" />
+				<input type="hidden" name="zoom" value="<?php echo isset($image->zoom) ? esc_attr($image->zoom) : ""; ?>" />
 				<input type="hidden" name="link" value="<?php echo esc_attr($image->link );?>" />
 				<input type="hidden" name="blank" value="<?php echo esc_attr($image->blank );?>" />
 				<input type="hidden" name="hidden" value="<?php echo esc_attr($image->hidden );?>" />

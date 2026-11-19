@@ -1,3 +1,9 @@
+= 3.6.17 - 19.11.2026 =
+- Added: WordPress 7.2 compatibility
+- Changed: Updated the Gutenberg block
+- Fixed: "undefined" appearing in the block shortcode
+- Fixed: PHP warnings in the admin area
+
 = 3.6.16 - 08.10.2026 =
 - Fixed: Security update.
 

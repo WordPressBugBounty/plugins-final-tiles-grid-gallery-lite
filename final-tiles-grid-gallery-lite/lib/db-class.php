@@ -98,7 +98,7 @@ if(! class_exists('FinalTilesDB'))
 			$tb_i = $wpdb->prefix . "FinalTiles_gallery_images";
 			$gallery = $wpdb->get_row($wpdb->prepare("SELECT * FROM $tb_g WHERE Id = %d", $id));
 
-			return $gallery->configuration;
+			return $gallery ? $gallery->configuration : '';
 		}
 
 		public function canUserEdit( $gallery_id )
@@ -164,6 +164,10 @@ if(! class_exists('FinalTilesDB'))
 					$data = new stdClass();
 				if (!isset($data->name))
 					$data->name = '';
+				if (!isset($data->description))
+					$data->description = '';
+				if (!isset($data->source))
+					$data->source = '';
 				$data->Id = $gallery->Id;
 				$result[] = $data;
 			}
