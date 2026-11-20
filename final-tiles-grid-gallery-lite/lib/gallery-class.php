@@ -514,18 +514,20 @@ if (!class_exists("FinalTilesGallery"))
 
 		public function cssRuleRotation($prefix)
 		{
-			if($this->gallery->hoverRotation == 0)
+			$rotation = absint($this->gallery->hoverRotation);
+			if($rotation === 0)
 				return "";
 
-			return $prefix."rotate(".absint($this->gallery->hoverRotation)."deg) ";
+			return $prefix."rotate(".$rotation."deg) ";
 		}
 
 		public function cssRuleZoom($prefix)
 		{
-			if($this->gallery->hoverZoom == 100 || $this->gallery->hoverZoom == 0)
+			$zoom = absint($this->gallery->hoverZoom);
+			if($zoom === 100 || $zoom === 0)
 				return "";
 
-			return $prefix."scale(".(absint($this->gallery->hoverZoom)/100).") ";
+			return $prefix."scale(".($zoom/100).") ";
 		}
 
 		private function hasCaptionIcon()
@@ -656,7 +658,7 @@ if (!class_exists("FinalTilesGallery"))
 				}
 			}
 
-			if($gallery->hoverZoom != 100 || $gallery->hoverRotation != 0)
+			if($this->cssRuleZoom('') !== '' || $this->cssRuleRotation('') !== '')
 			{
 				$html .= "#ftg-".absint($this->id.$rid)." .tile:hover img {\n";
 

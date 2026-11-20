@@ -1,3 +1,7 @@
+= 3.6.18 - 20.11.2026 =
+- Fixed: Images disappearing on hover after saving a gallery
+- Fixed: Saving a gallery in the free version resetting some settings
+
 = 3.6.17 - 19.11.2026 =
 - Added: WordPress 7.2 compatibility
 - Changed: Updated the Gutenberg block

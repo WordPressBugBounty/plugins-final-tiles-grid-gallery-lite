@@ -2,7 +2,7 @@
 /**
  * Plugin Name:              Final Tiles Grid Gallery - Image Gallery
  * Description:              WordPress Plugin for creating responsive image galleries.
- * Version:                  3.6.17
+ * Version:                  3.6.18
  * Author:                   WPChill
  * Author URI:               https://wpchill.com
  * Tested up to:             7.2
@@ -26,7 +26,7 @@
  * @fs_premium_only /lightbox-pro
  */
 
-define( 'FTGVERSION', '3.6.17' );
+define( 'FTGVERSION', '3.6.18' );
 
 // Create a helper function for easy SDK access.
 if ( ! function_exists( 'ftg_fs' ) ) {
@@ -1639,6 +1639,8 @@ if ( ! class_exists( 'FinalTiles_Gallery' ) ) {
 				'loadedRotateX'                       => isset( $_POST['ftg_loadedRotateX'] ) ? intval( wp_unslash( $_POST['ftg_loadedRotateX'] ) ) : '',
 			);
 
+			$data = $this->preserve_locked_fields( $id, $data );
+
 			header( 'Content-type: application/json' );
 			if ( $id > 0 ) {
 				$result = $this->FinalTilesdb->editGallery( $id, $data );
@@ -1654,6 +1656,45 @@ if ( ! class_exists( 'FinalTiles_Gallery' ) ) {
 			}
 
 			wp_die();
+		}
+
+		/**
+		 * Fields locked behind a plan are not posted (or posted empty) by the edit form,
+		 * so keep their stored value instead of overwriting it with ''.
+		 */
+		private function preserve_locked_fields( $id, $data ) {
+			$existing = $id > 0 ? json_decode( $this->FinalTilesdb->getGalleryConfig( $id ), true ) : array();
+			$existing = is_array( $existing ) ? array_merge( $this->defaultValues, $existing ) : $this->defaultValues;
+
+			// Rendered as an upgrade CTA, without an input.
+			$cta_fields = array(
+				'hoverZoom'             => 'ftg_hoverZoom',
+				'hoverRotation'         => 'ftg_hoverRotation',
+				'hoverDuration'         => 'ftg_hoverDuration',
+				'customCaptionIcon'     => 'ftg_customCaptionIcon',
+				'filters'               => 'ftg_filters',
+				'imageSizeFactorCustom' => 'ftg_imageSizeFactorCustom',
+			);
+			foreach ( $cta_fields as $key => $post_key ) {
+				// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in save_gallery().
+				if ( ! isset( $_POST[ $post_key ] ) && isset( $existing[ $key ] ) ) {
+					$data[ $key ] = $existing[ $key ];
+				}
+			}
+			// The default filter radio is legitimately absent when no filter is selected, so only keep it when the filters UI is missing.
+			// phpcs:ignore WordPress.Security.NonceVerification.Missing -- verified in save_gallery().
+			if ( ! isset( $_POST['ftg_filters'] ) && isset( $existing['defaultFilter'] ) ) {
+				$data['defaultFilter'] = $existing['defaultFilter'];
+			}
+
+			// Selects with disabled options: jQuery posts an empty value when a disabled option is selected.
+			foreach ( array( 'captionBehavior', 'captionEasing', 'captionEmpty', 'captionMobileBehavior', 'lightbox', 'mobileLightbox' ) as $key ) {
+				if ( '' === $data[ $key ] && isset( $existing[ $key ] ) ) {
+					$data[ $key ] = $existing[ $key ];
+				}
+			}
+
+			return $data;
 		}
 
 		public static function get_image_size_links( $id ) {

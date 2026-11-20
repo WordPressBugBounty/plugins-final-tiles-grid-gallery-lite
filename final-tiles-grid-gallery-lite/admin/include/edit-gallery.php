@@ -323,6 +323,18 @@ $current_user = isset( $gallery->author_id ) ? absint( $gallery->author_id ) : $
 								<?php elseif ( $data['type'] == 'select' ) : ?>
 									<div class="text">
 										<select class="browser-default" name="ftg_<?php print esc_attr( $f ); ?>">
+											<?php
+											$ftg_current_value = ( $gallery && isset( $gallery->$f ) ) ? (string) $gallery->$f : '';
+											$ftg_known_values  = array();
+											foreach ( $data['values'] as $ftg_group_options ) {
+												foreach ( $ftg_group_options as $ftg_option ) {
+													$ftg_known_values[] = explode( '|', $ftg_option )[0];
+												}
+											}
+											?>
+											<?php if ( '' !== $ftg_current_value && ! in_array( $ftg_current_value, $ftg_known_values, true ) ) : ?>
+												<option disabled selected value="<?php echo esc_attr( $ftg_current_value ); ?>"><?php echo esc_html( $ftg_current_value ); ?> (upgrade to unlock)</option>
+											<?php endif ?>
 											<?php foreach ( array_keys( $data['values'] ) as $optgroup ) : ?>
 												<optgroup label="<?php echo esc_attr( $optgroup ); ?>">
 													<?php foreach ( $data['values'][ $optgroup ] as $option ) : ?>
